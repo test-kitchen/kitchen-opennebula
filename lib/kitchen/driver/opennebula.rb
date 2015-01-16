@@ -54,7 +54,7 @@ module Kitchen
       default_config :wait_for, 600
       default_config :no_ssh_tcp_check, false
       default_config :no_ssh_tcp_check_sleep, 120
-
+      
       def initialize(config)
         super
         Fog.timeout = config[:wait_for].to_i
@@ -94,13 +94,18 @@ module Kitchen
           raise "Could not find template to create VM."
         end
         newvm.name = config[:vm_hostname]
-        newvm.flavor.user_variables = config[:user_variables]
+        
+        newvm.flavor.user_variables = {} if newvm.flavor.user_variables.nil? || newvm.flavor.user_variables.empty?
+        config[:user_variables].each do |key, val|
+          newvm.flavor.user_variables[key.to_s] = val
+        end
+        
+        newvm.flavor.context = {} if newvm.flavor.context.nil? || newvm.flavor.context.empty?
         newvm.flavor.context['SSH_PUBLIC_KEY'] = File.read(config[:public_key_path]).chomp
         newvm.flavor.context['TEST_KITCHEN'] = "YES"
-
         # Support for overriding context variables in the VM template
         config[:context_variables].each do |key, val|
-          newvm.flavor.context[key] = val
+          newvm.flavor.context[key.to_s] = val
         end
         newvm.flavor.memory = config[:memory]
        
@@ -119,7 +124,7 @@ module Kitchen
         sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
         debug("SSH ready on #{instance.to_str}")
       end
-
+      
       def converge(state)
         super
       end
