@@ -97,6 +97,34 @@ installed. There are several different behaviors available:
 
 The default value is unset, or `nil`.
 
+### <a name="wait_for"></a> wait_for
+
+This variable is used to override timeout for Fog's common `wait_for` method which states that it "takes a block and waits for either the block to return true for the object or for a timeout (defaults to 10 minutes)".
+
+### <a name="no_ssh_tcp_check"></a> no\_ssh\_tcp\_check
+
+To avoid test-kitchen's ssh tcp check in the create phase you can set `no_ssh_tcp_check` to `true` and do single sleep instead. Sleep period is configured by `no_ssh_tcp_check_sleep`. The default for `no_ssh_tcp_check` is set to `false`.
+
+### <a name="no_ssh_tcp_check_sleep"></a> no\_ssh\_tcp\_check\_sleep
+
+This variable configures a single sleep used when `no_ssh_tcp_check` is set to `true`. The default for `no_ssh_tcp_check` is 2 minutes.
+
+### <a name="no_passwordless_sudo_check"></a> no\_passwordless\_sudo\_check
+
+To avoid test-kitchen's passwordless sudo check in the create phase you can set `no_passwordless_sudo_check` to `true` and do single sleep instead. Sleep period is configured by `no_passwordless_sudo_sleep`. The default for `no_passwordless_sudo_check` is set to `false`.
+
+### <a name="no_passwordless_sudo_sleep"></a> no\_passwordless\_sudo\_sleep
+
+This variable configures a single sleep used when `no_passwordless_sudo_check` is set to `true`. The default for `no_passwordless_sudo_sleep` is 2 minutes.
+
+### <a name="passwordless_sudo_timeout"></a> passwordless\_sudo\_timeout
+
+This variable configures the max timeout will wait in the create phase for passwordless sudo to be setup. The variable is used when `no_passwordless_sudo_check` is set to `false`. The default for `passwordless_sudo_timeout` is 5 minutes.
+
+### <a name="passwordless_sudo_retry_interval"></a> passwordless\_sudo\_retry\_interval
+
+This variable configures retry interval in the create phase to periodically check that passwordless sudo is setup. It does this until max timeout (set by `passwordless_sudo_timeout`) is reached. The variable is used when `no_passwordless_sudo_check` is set to `false`. The default for `passwordless_sudo_retry_interval` is 10 seconds.
+
 ## <a name="development"></a> Development
 
 * Source hosted at [GitHub][repo]
