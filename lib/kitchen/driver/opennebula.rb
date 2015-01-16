@@ -51,6 +51,17 @@ module Kitchen
       default_config :user_variables, { }
       default_config :context_variables, { }
 
+      default_config :wait_for, 600
+      default_config :no_ssh_tcp_check, false
+      default_config :no_ssh_tcp_check_sleep, 120
+      default_config :no_passwordless_sudo_check, false
+      default_config :no_passwordless_sudo_sleep, 120
+      
+      def initialize(config)
+        super
+        Fog.timeout = config[:wait_for].to_i
+      end
+
       def create(state)
         conn = opennebula_connect
 
@@ -76,19 +87,27 @@ module Kitchen
             :uid   => config[:template_uid]
           }
           newvm.flavor = conn.flavors.get_by_filter filter
+          if !newvm.flavor.nil? and newvm.flavor.length > 1
+            raise 'More than one template found.  Please restrict using template_uname'
+          end
+          newvm.flavor = newvm.flavor.first unless newvm.flavor.nil?
         end
         if newvm.flavor.nil?
           raise "Could not find template to create VM."
         end
-        newvm.flavor = newvm.flavor.first
         newvm.name = config[:vm_hostname]
-        newvm.flavor.user_variables = config[:user_variables]
+        
+        newvm.flavor.user_variables = {} if newvm.flavor.user_variables.nil? || newvm.flavor.user_variables.empty?
+        config[:user_variables].each do |key, val|
+          newvm.flavor.user_variables[key.to_s] = val
+        end
+        
+        newvm.flavor.context = {} if newvm.flavor.context.nil? || newvm.flavor.context.empty?
         newvm.flavor.context['SSH_PUBLIC_KEY'] = File.read(config[:public_key_path]).chomp
         newvm.flavor.context['TEST_KITCHEN'] = "YES"
-
         # Support for overriding context variables in the VM template
         config[:context_variables].each do |key, val|
-          newvm.flavor.context[key] = val
+          newvm.flavor.context[key.to_s] = val
         end
         newvm.flavor.memory = config[:memory]
        
@@ -98,9 +117,41 @@ module Kitchen
         state[:vm_id] = vm.id
         state[:hostname] = vm.ip
         state[:username] = config[:username]
+        tcp_check(state)
+        passwordless_sudo_check(state)
         info("OpenNebula instance #{instance.to_str} created.")
       end
 
+      def tcp_check(state)
+        wait_for_sshd(state[:hostname]) unless config[:no_ssh_tcp_check]
+        sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
+        debug("SSH ready on #{instance.to_str}")
+      end
+      
+      def passwordless_sudo_check(state)
+        wait_for_passwordless_sudo(state) unless config[:no_passwordless_sudo_check]
+        sleep(config[:no_passwordless_sudo_sleep]) if config[:no_passwordless_sudo_check]
+        debug("Passwordless sudo ready on #{instance.to_str}")
+      end
+      
+      def wait_for_passwordless_sudo(state)
+        Kitchen::SSH.new(*build_ssh_args(state)) do |conn|
+          retries = config[:passwordless_sudo_timeout] || 300
+          retry_interval = config[:passwordless_sudo_retry_interval] || 10
+          begin
+            logger.info("Waiting #{retries.to_s} seconds for #{config[:username]} user to be granted passwordless sudo on #{state[:hostname]}...")
+            retries -= retry_interval
+            run_remote("sudo -n true", conn)
+          rescue ActionFailed => e
+            if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
+              sleep retry_interval
+              retry
+            end
+            raise ActionFailed, e.message
+          end        
+        end
+      end
+      
       def converge(state)
         super
       end
@@ -133,7 +184,6 @@ module Kitchen
         } )
         conn
       end
-
-   end
+    end
   end
 end
