@@ -85,11 +85,14 @@ module Kitchen
             :uid   => config[:template_uid]
           }
           newvm.flavor = conn.flavors.get_by_filter filter
+          if !newvm.flavor.nil? and newvm.flavor.length > 1
+            raise 'More than one template found.  Please restrict using template_uname'
+          end
+          newvm.flavor = newvm.flavor.first unless newvm.flavor.nil?
         end
         if newvm.flavor.nil?
           raise "Could not find template to create VM."
         end
-        newvm.flavor = newvm.flavor.first
         newvm.name = config[:vm_hostname]
         newvm.flavor.user_variables = config[:user_variables]
         newvm.flavor.context['SSH_PUBLIC_KEY'] = File.read(config[:public_key_path]).chomp
