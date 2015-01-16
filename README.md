@@ -97,6 +97,18 @@ installed. There are several different behaviors available:
 
 The default value is unset, or `nil`.
 
+### <a name="wait_for"></a> wait_for
+
+This variable is used to override timeout for Fog's common `wait_for` method which states that it "takes a block and waits for either the block to return true for the object or for a timeout (defaults to 10 minutes)".
+
+### <a name="no_ssh_tcp_check"></a> no\_ssh\_tcp\_check
+
+To avoid test-kitchen's ssh tcp check in the create phase you can set `no_ssh_tcp_check` to `true` and do single sleep instead. Sleep period is configured by `no_ssh_tcp_check_sleep`. The default for `no_ssh_tcp_check` is set to `false`.
+
+### <a name="no_ssh_tcp_check_sleep"></a> no\_ssh\_tcp\_check\_sleep
+
+This variable configures a single sleep used when `no_ssh_tcp_check` is set to `true`. The default for `no_ssh_tcp_check` is 2 minutes.
+
 ## <a name="development"></a> Development
 
 * Source hosted at [GitHub][repo]

@@ -51,6 +51,15 @@ module Kitchen
       default_config :user_variables, { }
       default_config :context_variables, { }
 
+      default_config :wait_for, 600
+      default_config :no_ssh_tcp_check, false
+      default_config :no_ssh_tcp_check_sleep, 120
+
+      def initialize(config)
+        super
+        Fog.timeout = config[:wait_for].to_i
+      end
+
       def create(state)
         conn = opennebula_connect
 
@@ -98,7 +107,14 @@ module Kitchen
         state[:vm_id] = vm.id
         state[:hostname] = vm.ip
         state[:username] = config[:username]
+        tcp_check(state)
         info("OpenNebula instance #{instance.to_str} created.")
+      end
+
+      def tcp_check(state)
+        wait_for_sshd(state[:hostname]) unless config[:no_ssh_tcp_check]
+        sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
+        debug("SSH ready on #{instance.to_str}")
       end
 
       def converge(state)
