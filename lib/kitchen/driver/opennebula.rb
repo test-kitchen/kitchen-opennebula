@@ -65,6 +65,11 @@ module Kitchen
       def create(state)
         conn = opennebula_connect
 
+        # Check for servers from connection to help debug possible connection issues
+        if conn.servers.length == 0
+          info("Connection has returned zero servers.")
+        end
+
         # Check if VM is already created.
         if state[:vm_id] && !conn.list_vms({:id => state[:vm_id]}).empty?
           info("OpenNebula instance #{instance.to_str} already created.")
@@ -93,7 +98,7 @@ module Kitchen
           newvm.flavor = newvm.flavor.first unless newvm.flavor.nil?
         end
         if newvm.flavor.nil?
-          raise "Could not find template to create VM."
+          raise "Could not find template to create VM. -- Verify your template filters and one_auth credentials"
         end
         newvm.name = config[:vm_hostname]
         
