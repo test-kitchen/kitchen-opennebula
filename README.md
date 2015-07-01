@@ -4,13 +4,19 @@ A Test Kitchen Driver for Opennebula.
 
 ## <a name="requirements"></a> Requirements
 
-This driver depends on BlackBerry patches to Fog (https://github.com/fog/fog)
-for better support for OpenNebula.  These patches can be found at
-https://github.com/blackberry/fog until they are merged to upstream.
+This driver depends on [fog](https://github.com/fog/fog). Please note possibility that unreleased changes on master branch may depend on patches that can be found at https://github.com/blackberry/fog until they are merged to upstream.
 
 ## <a name="installation"></a> Installation and Setup
 
-Please read the [Driver usage][driver_usage] page for more details.
+1. Download and install latest [ChefDK](https://downloads.chef.io/chef-dk/).
+2. Please add bin locations to your PATH:
+  * C:\opscode\chefdk\bin;C:\opscode\chefdk\embedded\bin\ (windows)
+  * /opt/chefdk/bin/:/opt/chefdk/embedded/bin (unix)
+3. Reopen console or reload your env PATH
+4. Run following command:
+    gem install kitchen-opennebula --no-user-install --no-ri --no-rdoc
+
+Please read the [config_yml_kitchen](https://docs.chef.io/config_yml_kitchen.html) page for more details.
 
 ## Virtual Machine Requirements
 
@@ -142,7 +148,13 @@ example:
 
 ## <a name="authors"></a> Authors
 
-Created and maintained by [Andrew Brown][author] (<anbrown@blackberry.com>)
+Created by [Andrew Brown][author] (<anbrown@blackberry.com>)
+
+## <a name="maintainers"></a> Maintainers
+
+Maintained by
+  * [Andrew Brown][author] (<anbrown@blackberry.com>)
+  * [Philip Oliva][maintainer] (<philoliva8@gmail.com>)
 
 ## <a name="license"></a> License
 
@@ -150,6 +162,7 @@ Apache 2.0 (see [LICENSE][license])
 
 
 [author]:           https://github.com/andrewjamesbrown
+[maintainer]:       https://github.com/poliva83
 [issues]:           https://github.com/test-kitchen/kitchen-opennebula/issues
 [license]:          https://github.com/test-kitchen/kitchen-opennebula/blob/master/LICENSE
 [repo]:             https://github.com/test-kitchen/kitchen-opennebula
