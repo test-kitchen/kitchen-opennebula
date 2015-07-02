@@ -65,11 +65,10 @@ module Kitchen
       def create(state)
         conn = opennebula_connect
 
-        # Check for servers from connection to help debug possible connection issues
-        if conn.servers.length == 0
-          info("Connection has returned zero servers.")
-        end
-
+        # Ensure we can authenticate with OpenNebula
+        rc = conn.client.get_version
+        raise(rc.message) if OpenNebula.is_error?(rc)
+        
         # Check if VM is already created.
         if state[:vm_id] && !conn.list_vms({:id => state[:vm_id]}).empty?
           info("OpenNebula instance #{instance.to_str} already created.")
