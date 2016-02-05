@@ -133,26 +133,25 @@ module Kitchen
       end
       
       def passwordless_sudo_check(state)
-        wait_for_passwordless_sudo(state) unless config[:no_passwordless_sudo_check]
-        sleep(config[:no_passwordless_sudo_sleep]) if config[:no_passwordless_sudo_check]
+        if config[:no_passwordless_sudo_check]
+          sleep(config[:no_passwordless_sudo_sleep])
+        else
+          wait_for_passwordless_sudo(state)
+        end
         debug("Passwordless sudo ready on #{instance.to_str}")
       end
       
       def wait_for_passwordless_sudo(state)
-        Kitchen::SSH.new(*build_ssh_args(state)) do |conn|
-          retries = config[:passwordless_sudo_timeout] || 300
-          retry_interval = config[:passwordless_sudo_retry_interval] || 10
-          begin
-            logger.info("Waiting #{retries.to_s} seconds for #{config[:username]} user to be granted passwordless sudo on #{state[:hostname]}...")
-            retries -= retry_interval
-            run_remote("sudo -n true", conn)
-          rescue ActionFailed => e
-            if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
-              sleep retry_interval
-              retry
-            end
-            raise ActionFailed, e.message
-          end        
+        retries = config[:passwordless_sudo_timeout] || 300
+        retry_interval = config[:passwordless_sudo_retry_interval] || 10
+        begin
+          remote_command(state, 'sudo -n true')
+        rescue Kitchen::Transport::SshFailed => e
+          if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
+            sleep retry_interval
+            retry
+          end
+          raise ActionFailed, e.message
         end
       end
       
