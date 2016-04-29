@@ -26,7 +26,7 @@ module Kitchen
     # Opennebula driver for Kitchen.
     #
     # @author Andrew J. Brown <anbrown@blackberry.com>
-    class Opennebula < Kitchen::Driver::SSHBase
+    class Opennebula < Kitchen::Driver::Base
       default_config :opennebula_endpoint,
         ENV.fetch('ONE_XMLRPC', 'http://127.0.0.1:2633/RPC2')
 
