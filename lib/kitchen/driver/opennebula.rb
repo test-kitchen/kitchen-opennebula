@@ -127,7 +127,7 @@ module Kitchen
       end
 
       def tcp_check(state)
-        wait_for_sshd(state[:hostname]) unless config[:no_ssh_tcp_check]
+        instance.transport.connection(state).wait_until_ready unless config[:no_ssh_tcp_check]
         sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
         debug("SSH ready on #{instance.to_str}")
       end
@@ -145,7 +145,9 @@ module Kitchen
         retries = config[:passwordless_sudo_timeout] || 300
         retry_interval = config[:passwordless_sudo_retry_interval] || 10
         begin
-          remote_command(state, 'sudo -n true')
+          instance.transport.connection(state) do |conn|
+            conn.execute('sudo -n true')
+          end
         rescue Kitchen::Transport::SshFailed => e
           if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
             sleep retry_interval
