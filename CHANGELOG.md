@@ -1,3 +1,7 @@
+## 0.2.1
+
+* Do not use methods from Kitchen::SSHBase as we are no longer inherit them. Rely on instance.transport instead.
+
 ## 0.2.0
 
 * Switch SSH api to use gateway-enabled wrapper, instead of raw Kitchen::SSH, which does not support ssh gateways.
