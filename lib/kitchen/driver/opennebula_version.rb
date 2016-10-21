@@ -21,6 +21,6 @@ module Kitchen
   module Driver
 
     # Version string for Opennebula Kitchen driver
-    OPENNEBULA_VERSION = "0.2.1"
+    OPENNEBULA_VERSION = "0.2.2"
   end
 end

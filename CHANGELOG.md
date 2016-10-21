@@ -1,3 +1,7 @@
+## 0.2.2
+
+* Restrict opennebula gem dependency version to be '~> 4.10', '< 5'.
+
 ## 0.2.1
 
 * Do not use methods from Kitchen::SSHBase as we are no longer inherit them. Rely on instance.transport instead.
