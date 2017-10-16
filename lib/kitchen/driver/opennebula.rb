@@ -175,13 +175,16 @@ module Kitchen
 
       def opennebula_connect()        
         opennebula_creds = nil
-        if File.exists?(config[:oneauth_file])
+        if ENV.has_key?('ONEAUTH_USERNAME') and ENV.has_key?('ONEAUTH_PASSWORD')
+          opennebula_username = ENV['ONEAUTH_USERNAME']
+          opennebula_password = ENV['ONEAUTH_PASSWORD']
+        elsif File.exists?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
+          opennebula_username = opennebula_creds.split(':')[0]
+          opennebula_password = opennebula_creds.split(':')[1]
         else
           raise ActionFailed, "Could not find one_auth file #{config[:oneauth_file]}"
         end
-        opennebula_username = opennebula_creds.split(':')[0]
-        opennebula_password = opennebula_creds.split(':')[1]
         conn = Fog::Compute.new( {
           :provider => 'OpenNebula',
           :opennebula_username => opennebula_username,
