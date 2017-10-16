@@ -49,6 +49,8 @@ module Kitchen
 
       default_config :username, 'local'
       default_config :memory, 512
+      default_config :vcpu, 1
+      default_config :cpu, 1
       default_config :user_variables, { }
       default_config :context_variables, { }
 
@@ -115,6 +117,8 @@ module Kitchen
           newvm.flavor.context[key.to_s] = val
         end
         newvm.flavor.memory = config[:memory]
+        newvm.flavor.vcpu = config[:vcpu]
+        newvm.flavor.cpu = config[:cpu]
        
         # TODO: Set up NIC and disk if not specified in template
         vm = newvm.save
