@@ -34,7 +34,8 @@ module Kitchen
         ENV.fetch('ONE_AUTH', "#{ENV['HOME']}/.one/one_auth")
 
       default_config :vm_hostname do |driver|
-        "#{driver.instance.name}"
+        randstr = 8.times.collect{[*'a'..'z',*('0'..'9')].sample}.join
+        "#{driver.instance.name}-#{randstr}"
       end
 
       default_config :public_key_path do
