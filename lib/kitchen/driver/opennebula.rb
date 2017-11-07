@@ -34,7 +34,8 @@ module Kitchen
         ENV.fetch('ONE_AUTH', "#{ENV['HOME']}/.one/one_auth")
 
       default_config :vm_hostname do |driver|
-        "#{driver.instance.name}"
+        randstr = 8.times.collect{[*'a'..'z',*('0'..'9')].sample}.join
+        "#{driver.instance.name}-#{randstr}"
       end
 
       default_config :public_key_path do
@@ -48,6 +49,8 @@ module Kitchen
 
       default_config :username, 'local'
       default_config :memory, 512
+      default_config :vcpu, 1
+      default_config :cpu, 1
       default_config :user_variables, { }
       default_config :context_variables, { }
 
@@ -114,6 +117,8 @@ module Kitchen
           newvm.flavor.context[key.to_s] = val
         end
         newvm.flavor.memory = config[:memory]
+        newvm.flavor.vcpu = config[:vcpu]
+        newvm.flavor.cpu = config[:cpu]
        
         # TODO: Set up NIC and disk if not specified in template
         vm = newvm.save
@@ -174,7 +179,12 @@ module Kitchen
 
       def opennebula_connect()        
         opennebula_creds = nil
-        if File.exists?(config[:oneauth_file])
+        if ENV.has_key?('ONE_AUTH')
+          if File.exists(ENV['ONE_AUTH'])
+            opennebula_creds = File.read(ENV['ONE_AUTH'])
+          else
+            opennebula_creds = ENV['ONE_AUTH']
+        elsif File.exists?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
         else
           raise ActionFailed, "Could not find one_auth file #{config[:oneauth_file]}"
