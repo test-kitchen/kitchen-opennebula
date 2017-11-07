@@ -59,7 +59,7 @@ module Kitchen
       default_config :no_ssh_tcp_check_sleep, 120
       default_config :no_passwordless_sudo_check, false
       default_config :no_passwordless_sudo_sleep, 120
-      
+
       def initialize(config)
         super
         Fog.timeout = config[:wait_for].to_i
@@ -71,14 +71,14 @@ module Kitchen
         # Ensure we can authenticate with OpenNebula
         rc = conn.client.get_version
         raise(rc.message) if OpenNebula.is_error?(rc)
-        
+
         # Check if VM is already created.
         if state[:vm_id] && !conn.list_vms({:id => state[:vm_id]}).empty?
           info("OpenNebula instance #{instance.to_str} already created.")
           return
         end
-   
-        if config[:template_id].nil? and config[:template_name].nil? 
+
+        if config[:template_id].nil? and config[:template_name].nil?
           raise "template_name or template_id not specified in .kitchen.yml"
         elsif !config[:template_id].nil? and !config[:template_name].nil?
           raise "Only one of template_name or template_id should be specified in .kitchen.yml"
@@ -103,12 +103,12 @@ module Kitchen
           raise "Could not find template to create VM. -- Verify your template filters and one_auth credentials"
         end
         newvm.name = config[:vm_hostname]
-        
+
         newvm.flavor.user_variables = {} if newvm.flavor.user_variables.nil? || newvm.flavor.user_variables.empty?
         config[:user_variables].each do |key, val|
           newvm.flavor.user_variables[key.to_s] = val
         end
-        
+
         newvm.flavor.context = {} if newvm.flavor.context.nil? || newvm.flavor.context.empty?
         newvm.flavor.context['SSH_PUBLIC_KEY'] = File.read(config[:public_key_path]).chomp
         newvm.flavor.context['TEST_KITCHEN'] = "YES"
@@ -119,7 +119,7 @@ module Kitchen
         newvm.flavor.memory = config[:memory]
         newvm.flavor.vcpu = config[:vcpu]
         newvm.flavor.cpu = config[:cpu]
-       
+
         # TODO: Set up NIC and disk if not specified in template
         vm = newvm.save
         vm.wait_for { ready? }
@@ -136,7 +136,7 @@ module Kitchen
         sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
         debug("SSH ready on #{instance.to_str}")
       end
-      
+
       def passwordless_sudo_check(state)
         if config[:no_passwordless_sudo_check]
           sleep(config[:no_passwordless_sudo_sleep])
@@ -145,7 +145,7 @@ module Kitchen
         end
         debug("Passwordless sudo ready on #{instance.to_str}")
       end
-      
+
       def wait_for_passwordless_sudo(state)
         retries = config[:passwordless_sudo_timeout] || 300
         retry_interval = config[:passwordless_sudo_retry_interval] || 10
@@ -161,7 +161,7 @@ module Kitchen
           raise ActionFailed, e.message
         end
       end
-      
+
       def converge(state)
         super
       end
@@ -177,13 +177,14 @@ module Kitchen
 
       protected
 
-      def opennebula_connect()        
+      def opennebula_connect()
         opennebula_creds = nil
         if ENV.has_key?('ONE_AUTH')
           if File.exists(ENV['ONE_AUTH'])
             opennebula_creds = File.read(ENV['ONE_AUTH'])
           else
             opennebula_creds = ENV['ONE_AUTH']
+          end
         elsif File.exists?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
         else
