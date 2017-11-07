@@ -184,6 +184,7 @@ module Kitchen
             opennebula_creds = File.read(ENV['ONE_AUTH'])
           else
             opennebula_creds = ENV['ONE_AUTH']
+          end
         elsif File.exists?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
         else
