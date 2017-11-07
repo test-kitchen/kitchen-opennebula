@@ -1,3 +1,10 @@
+## 0.2.3
+
+* add random string to instance name
+* allow specifying cpu for box
+* use documented ONE_AUTH key
+* keep lower bound of requirement to '>= 4.10'
+
 ## 0.2.2
 
 * Restrict opennebula gem dependency version to be '~> 4.10', '< 5'.
