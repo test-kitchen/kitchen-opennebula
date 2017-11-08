@@ -180,7 +180,7 @@ module Kitchen
       def opennebula_connect()
         opennebula_creds = nil
         if ENV.has_key?('ONE_AUTH')
-          if File.exists(ENV['ONE_AUTH'])
+          if File.exists?(ENV['ONE_AUTH'])
             opennebula_creds = File.read(ENV['ONE_AUTH'])
           else
             opennebula_creds = ENV['ONE_AUTH']
