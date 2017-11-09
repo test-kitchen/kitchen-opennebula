@@ -180,12 +180,12 @@ module Kitchen
       def opennebula_connect()
         opennebula_creds = nil
         if ENV.has_key?('ONE_AUTH')
-          if File.exists?(ENV['ONE_AUTH'])
+          if File.exist?(ENV['ONE_AUTH'])
             opennebula_creds = File.read(ENV['ONE_AUTH'])
           else
             opennebula_creds = ENV['ONE_AUTH']
           end
-        elsif File.exists?(config[:oneauth_file])
+        elsif File.exist?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
         else
           raise ActionFailed, "Could not find one_auth file #{config[:oneauth_file]}"
