@@ -26,7 +26,7 @@ module Kitchen
     # Opennebula driver for Kitchen.
     #
     # @author Andrew J. Brown <anbrown@blackberry.com>
-    class Opennebula < Kitchen::Driver::SSHBase
+    class Opennebula < Kitchen::Driver::Base
       default_config :opennebula_endpoint,
         ENV.fetch('ONE_XMLRPC', 'http://127.0.0.1:2633/RPC2')
 
@@ -34,7 +34,8 @@ module Kitchen
         ENV.fetch('ONE_AUTH', "#{ENV['HOME']}/.one/one_auth")
 
       default_config :vm_hostname do |driver|
-        "#{driver.instance.name}"
+        randstr = 8.times.collect{[*'a'..'z',*('0'..'9')].sample}.join
+        "#{driver.instance.name}-#{randstr}"
       end
 
       default_config :public_key_path do
@@ -48,6 +49,8 @@ module Kitchen
 
       default_config :username, 'local'
       default_config :memory, 512
+      default_config :vcpu, 1
+      default_config :cpu, 1
       default_config :user_variables, { }
       default_config :context_variables, { }
 
@@ -56,7 +59,7 @@ module Kitchen
       default_config :no_ssh_tcp_check_sleep, 120
       default_config :no_passwordless_sudo_check, false
       default_config :no_passwordless_sudo_sleep, 120
-      
+
       def initialize(config)
         super
         Fog.timeout = config[:wait_for].to_i
@@ -65,13 +68,17 @@ module Kitchen
       def create(state)
         conn = opennebula_connect
 
+        # Ensure we can authenticate with OpenNebula
+        rc = conn.client.get_version
+        raise(rc.message) if OpenNebula.is_error?(rc)
+
         # Check if VM is already created.
         if state[:vm_id] && !conn.list_vms({:id => state[:vm_id]}).empty?
           info("OpenNebula instance #{instance.to_str} already created.")
           return
         end
-   
-        if config[:template_id].nil? and config[:template_name].nil? 
+
+        if config[:template_id].nil? and config[:template_name].nil?
           raise "template_name or template_id not specified in .kitchen.yml"
         elsif !config[:template_id].nil? and !config[:template_name].nil?
           raise "Only one of template_name or template_id should be specified in .kitchen.yml"
@@ -93,15 +100,15 @@ module Kitchen
           newvm.flavor = newvm.flavor.first unless newvm.flavor.nil?
         end
         if newvm.flavor.nil?
-          raise "Could not find template to create VM."
+          raise "Could not find template to create VM. -- Verify your template filters and one_auth credentials"
         end
         newvm.name = config[:vm_hostname]
-        
+
         newvm.flavor.user_variables = {} if newvm.flavor.user_variables.nil? || newvm.flavor.user_variables.empty?
         config[:user_variables].each do |key, val|
           newvm.flavor.user_variables[key.to_s] = val
         end
-        
+
         newvm.flavor.context = {} if newvm.flavor.context.nil? || newvm.flavor.context.empty?
         newvm.flavor.context['SSH_PUBLIC_KEY'] = File.read(config[:public_key_path]).chomp
         newvm.flavor.context['TEST_KITCHEN'] = "YES"
@@ -110,7 +117,9 @@ module Kitchen
           newvm.flavor.context[key.to_s] = val
         end
         newvm.flavor.memory = config[:memory]
-       
+        newvm.flavor.vcpu = config[:vcpu]
+        newvm.flavor.cpu = config[:cpu]
+
         # TODO: Set up NIC and disk if not specified in template
         vm = newvm.save
         vm.wait_for { ready? }
@@ -123,35 +132,36 @@ module Kitchen
       end
 
       def tcp_check(state)
-        wait_for_sshd(state[:hostname]) unless config[:no_ssh_tcp_check]
+        instance.transport.connection(state).wait_until_ready unless config[:no_ssh_tcp_check]
         sleep(config[:no_ssh_tcp_check_sleep]) if config[:no_ssh_tcp_check]
         debug("SSH ready on #{instance.to_str}")
       end
-      
+
       def passwordless_sudo_check(state)
-        wait_for_passwordless_sudo(state) unless config[:no_passwordless_sudo_check]
-        sleep(config[:no_passwordless_sudo_sleep]) if config[:no_passwordless_sudo_check]
+        if config[:no_passwordless_sudo_check]
+          sleep(config[:no_passwordless_sudo_sleep])
+        else
+          wait_for_passwordless_sudo(state)
+        end
         debug("Passwordless sudo ready on #{instance.to_str}")
       end
-      
+
       def wait_for_passwordless_sudo(state)
-        Kitchen::SSH.new(*build_ssh_args(state)) do |conn|
-          retries = config[:passwordless_sudo_timeout] || 300
-          retry_interval = config[:passwordless_sudo_retry_interval] || 10
-          begin
-            logger.info("Waiting #{retries.to_s} seconds for #{config[:username]} user to be granted passwordless sudo on #{state[:hostname]}...")
-            retries -= retry_interval
-            run_remote("sudo -n true", conn)
-          rescue ActionFailed => e
-            if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
-              sleep retry_interval
-              retry
-            end
-            raise ActionFailed, e.message
-          end        
+        retries = config[:passwordless_sudo_timeout] || 300
+        retry_interval = config[:passwordless_sudo_retry_interval] || 10
+        begin
+          instance.transport.connection(state) do |conn|
+            conn.execute('sudo -n true')
+          end
+        rescue Kitchen::Transport::SshFailed => e
+          if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
+            sleep retry_interval
+            retry
+          end
+          raise ActionFailed, e.message
         end
       end
-      
+
       def converge(state)
         super
       end
@@ -167,9 +177,15 @@ module Kitchen
 
       protected
 
-      def opennebula_connect()        
+      def opennebula_connect()
         opennebula_creds = nil
-        if File.exists?(config[:oneauth_file])
+        if ENV.has_key?('ONE_AUTH')
+          if File.exist?(ENV['ONE_AUTH'])
+            opennebula_creds = File.read(ENV['ONE_AUTH'])
+          else
+            opennebula_creds = ENV['ONE_AUTH']
+          end
+        elsif File.exist?(config[:oneauth_file])
           opennebula_creds = File.read(config[:oneauth_file])
         else
           raise ActionFailed, "Could not find one_auth file #{config[:oneauth_file]}"
