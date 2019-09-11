@@ -6,8 +6,8 @@ require 'kitchen/driver/opennebula_version'
 Gem::Specification.new do |spec|
   spec.name          = 'kitchen-opennebula'
   spec.version       = Kitchen::Driver::OPENNEBULA_VERSION
-  spec.authors       = ['Andrew J. Brown']
-  spec.email         = ['anbrown@blackberry.com']
+  spec.authors       = [ 'BlackBerry Automation Engineering' ]
+  spec.email         = [ 'nonesuch@blackberry.com' ]
   spec.description   = %q{A Test Kitchen Driver for Opennebula}
   spec.summary       = spec.description
   spec.homepage      = ''
@@ -26,6 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake'
 
   spec.add_development_dependency 'cane'
-  spec.add_development_dependency 'tailor'
   spec.add_development_dependency 'countloc'
 end

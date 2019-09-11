@@ -1,8 +1,6 @@
 # -*- encoding: utf-8 -*-
 #
-# Author:: Andrew J. Brown (<anbrown@blackberry.com>)
-#
-# Copyright (C) 2014, BlackBerry, Ltd.
+# Copyright (C) 2019, BlackBerry, Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +23,6 @@ module Kitchen
 
     # Opennebula driver for Kitchen.
     #
-    # @author Andrew J. Brown <anbrown@blackberry.com>
     class Opennebula < Kitchen::Driver::Base
       default_config :opennebula_endpoint,
         ENV.fetch('ONE_XMLRPC', 'http://127.0.0.1:2633/RPC2')
@@ -59,6 +56,7 @@ module Kitchen
       default_config :no_ssh_tcp_check_sleep, 120
       default_config :no_passwordless_sudo_check, false
       default_config :no_passwordless_sudo_sleep, 120
+      default_config :no_cloud_init_check, false
 
       def initialize(config)
         super
@@ -128,6 +126,7 @@ module Kitchen
         state[:username] = config[:username]
         tcp_check(state)
         passwordless_sudo_check(state)
+        wait_for_cloud_init(state) if cloud_init_check(state)
         info("OpenNebula instance #{instance.to_str} created.")
       end
 
@@ -147,14 +146,56 @@ module Kitchen
       end
 
       def wait_for_passwordless_sudo(state)
-        retries = config[:passwordless_sudo_timeout] || 300
+        started = Time.now
+        timeout = config[:passwordless_sudo_timeout] || 300
         retry_interval = config[:passwordless_sudo_retry_interval] || 10
         begin
           instance.transport.connection(state) do |conn|
-            conn.execute('sudo -n true')
+            conn.execute('sudo -n true > /dev/null 2>&1')
           end
         rescue Kitchen::Transport::SshFailed => e
-          if (e.message.eql? "SSH exited (1) for command: [sudo -n true]") && (retries >= 0)
+          duration = ((Time.now - started) * 1000).ceil/1000.to_i
+          if (e.message.eql? "SSH exited (1) for command: [sudo -n true > /dev/null 2>&1]") && (duration <= timeout)
+            info("Probing for passwordless sudo ready on #{instance.to_str}, time left #{duration}/#{timeout} secs")
+            sleep retry_interval
+            retry
+          end
+          raise ActionFailed, e.message
+        end
+      end
+
+      def cloud_init_check(state)
+        return false if config[:no_cloud_init_check]
+        sleep 5 # allow cloud-init to start
+        begin
+          instance.transport.connection(state) do |conn|
+            info("Probing for cloud-init running on #{instance.to_str} ...")
+            conn.execute('ps -ef | grep cloud-init | grep -v grep >/dev/null 2>&1; exit $?')
+          end
+          info("Cloud-init is running on #{instance.to_str}")
+          return true
+        rescue
+          info("Cloud-init not running on #{instance.to_str}")
+          return false
+        end
+      end
+
+      def wait_for_cloud_init(state)
+        started = Time.now
+        timeout = config[:cloud_init_timeout] || 600
+        retry_interval = config[:cloud_init_retry_interval] || 10
+        cmd = 'out=$(cloud-init analyze dump| awk "/running modules for final/{nr[NR+4]; next}; NR in nr"); \
+if [[ $out =~ "SUCCESS" ]]; then exit 0; elif [[ $out =~ "FAIL" ]]; then exit 11; else exit 99; fi'
+        begin
+          instance.transport.connection(state) do |conn|
+            conn.execute(cmd)
+          end
+        rescue Kitchen::Transport::SshFailed => e
+          duration = ((Time.now - started) * 1000).ceil/1000.to_i
+          if (e.message.match(/SSH exited \(11\) for command: \[out=\$\(cloud-init analyze dump/)) && (duration <= timeout)
+            error("Cloud-init failed on #{instance.to_str}")
+          elsif (e.message.match(/SSH exited \(99\) for command: \[out=\$\(cloud-init analyze dump/)) && (duration <= timeout)
+            info("Probing for cloud-init successful completion on #{instance.to_str}, time left #{duration}/#{timeout} secs")
             sleep retry_interval
             retry
           end
