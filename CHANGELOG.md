@@ -1,3 +1,8 @@
+## 0.3.0
+
+* fix endless loop in passwordless sudo check
+* wait for cloud-init to complete successfully
+
 ## 0.2.3
 
 * add random string to instance name

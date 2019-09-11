@@ -1,8 +1,6 @@
 # -*- encoding: utf-8 -*-
 #
-# Author:: Andrew Brown (<anbrown@blackberry.com>)
-#
-# Copyright (C) 2014, BlackBerry, Ltd.
+# Copyright (C) 2019, BlackBerry, Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +19,6 @@ module Kitchen
   module Driver
 
     # Version string for Opennebula Kitchen driver
-    OPENNEBULA_VERSION = "0.2.3"
+    OPENNEBULA_VERSION = "0.3.0"
   end
 end
