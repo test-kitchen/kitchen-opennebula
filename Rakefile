@@ -1,20 +1,18 @@
-require 'bundler'
-require 'bundler/gem_tasks'
-require 'cane/rake_task'
+require "bundler/gem_tasks"
+require "rubocop/rake_task"
+require "chefstyle"
 
-desc "Run cane to check quality metrics"
-Cane::RakeTask.new do |cane|
-  cane.abc_max = 80
-  cane.style_measure = 120
+desc "Run RuboCop on the lib directory"
+RuboCop::RakeTask.new(:rubocop) do |task|
+  task.patterns = ["lib/**/*.rb"]
+  # don't abort rake on failure
+  task.fail_on_error = false
 end
 
 desc "Display LOC stats"
-task :stats do
-  puts "\n## Production Code Stats"
-  sh "countloc -r lib"
+task :loc do
+  puts "\n## LOC Stats"
+  sh "countloc -r lib/kitchen"
 end
 
-desc "Run all quality tasks"
-task :quality => [:cane]
-
-task :default => [:quality]
+task default: %i{rubocop loc}
