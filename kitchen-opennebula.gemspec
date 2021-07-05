@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "test-kitchen", ">= 1.2", "< 3.0"
+  spec.add_dependency "test-kitchen", ">= 1.2", "< 4.0"
   spec.add_dependency "fog", "~> 1.30"
   spec.add_dependency "opennebula", ">= 4.10"
 
