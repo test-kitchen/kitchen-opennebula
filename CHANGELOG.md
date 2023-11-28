@@ -1,3 +1,5 @@
+# kitchen-opennebula changelog
+
 ## 0.3.0
 
 * fix endless loop in passwordless sudo check

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 #
 # Copyright (C) 2019, BlackBerry, Ltd.
 #
@@ -18,11 +17,7 @@ require "fog"
 require "kitchen"
 
 module Kitchen
-
   module Driver
-
-    # Opennebula driver for Kitchen.
-    #
     class Opennebula < Kitchen::Driver::Base
       default_config :opennebula_endpoint,
         ENV.fetch("ONE_XMLRPC", "http://127.0.0.1:2633/RPC2")
@@ -176,10 +171,10 @@ module Kitchen
             conn.execute("ps -ef | grep cloud-init | grep -v grep >/dev/null 2>&1; exit $?")
           end
           info("Cloud-init is running on #{instance.to_str}")
-          return true
+          true
         rescue
           info("Cloud-init not running on #{instance.to_str}")
-          return false
+          false
         end
       end
 
@@ -238,8 +233,8 @@ if [[ $out =~ "SUCCESS" ]]; then exit 0; elif [[ $out =~ "FAIL" ]]; then exit 11
         opennebula_password = opennebula_creds.split(":")[1]
         conn = Fog::Compute.new( {
           provider: "OpenNebula",
-          opennebula_username: opennebula_username,
-          opennebula_password: opennebula_password,
+          opennebula_username:,
+          opennebula_password:,
           opennebula_endpoint: config[:opennebula_endpoint],
         } )
         conn

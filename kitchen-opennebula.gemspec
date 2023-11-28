@@ -21,10 +21,4 @@ Gem::Specification.new do |spec|
   spec.add_dependency "test-kitchen", ">= 1.2", "< 4.0"
   spec.add_dependency "fog", ">= 1.30", "< 3.0"
   spec.add_dependency "opennebula", ">= 4.10"
-
-  spec.add_development_dependency "bundler"
-  spec.add_development_dependency "rake"
-
-  spec.add_development_dependency "chefstyle"
-  spec.add_development_dependency "countloc"
 end
