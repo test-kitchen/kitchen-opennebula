@@ -1,6 +1,6 @@
 require "bundler/gem_tasks"
 require "rubocop/rake_task"
-require "chefstyle"
+require "cookstyle/chefstyle"
 
 desc "Run RuboCop on the lib directory"
 RuboCop::RakeTask.new(:rubocop) do |task|
