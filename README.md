@@ -1,195 +1,261 @@
-# Kitchen::Opennebula
+# kitchen-opennebula
 
 [![Gem Version](https://badge.fury.io/rb/kitchen-opennebula.svg)](https://badge.fury.io/rb/kitchen-opennebula)
+[![Test](https://github.com/test-kitchen/kitchen-opennebula/actions/workflows/lint.yml/badge.svg)](https://github.com/test-kitchen/kitchen-opennebula/actions/workflows/lint.yml)
 
-A Test Kitchen Driver for Opennebula.
+A [Test Kitchen](https://kitchen.ci/) driver for [OpenNebula](https://opennebula.io/).
 
-## Requirements
+Test Kitchen builds a throwaway machine, applies your configuration to it, runs your tests against it, and tears it
+down. This driver is the piece that does the building and tearing down: it instantiates a VM from an OpenNebula
+template, waits until the VM is genuinely ready to be configured, and hands it off to your provisioner.
 
-This driver talks to OpenNebula's XML-RPC API through [fog-opennebula](https://github.com/fog/fog-opennebula) and
-requires Ruby 3.1 or later.
+Everything else — how the machine is configured, how it's tested, how you connect to it — is handled by Test Kitchen's
+other plugins and is the same as it would be on any other cloud.
 
-## Installation and Setup
+## Before you start
 
-1. Download and install latest [ChefDK](https://downloads.chef.io/tools/workstation).
-2. Please add bin locations to your PATH:
+You will need:
 
-   - `C:\opscode\chefdk\bin;C:\opscode\chefdk\embedded\bin\` (windows)
-   - `/opt/chefdk/bin/:/opt/chefdk/embedded/bin` (unix)
+- **Ruby 3.1 or newer**, and Test Kitchen. If you use [Chef Workstation](https://www.chef.io/downloads), you already
+  have both.
+- **An OpenNebula cloud you can reach**, specifically its XML-RPC endpoint (typically port 2633).
+- **OpenNebula credentials**, in the usual `username:password` form.
+- **A registered OpenNebula template** to build VMs from, whose guest image meets the
+  [requirements below](#preparing-a-guest-image).
 
-3. Reopen console or reload your env PATH
-4. Run following command:
-    gem install kitchen-opennebula --no-user-install --no-ri --no-rdoc
+## Installation
 
-Please read the [config_yml_kitchen](https://kitchen.ci/docs/reference/) page for more details.
+If you are using Chef Workstation, install the gem into its Ruby:
 
-## Virtual Machine Requirements
+```shell
+chef gem install kitchen-opennebula
+```
 
-This driver requires an OpenNebula OS image that conforms to a number of requirements
+Otherwise add it to your project's `Gemfile`:
 
-* The VM puts the ssh key defined in the SSH\_PUBLIC\_KEY context variable into `$HOME/.ssh/authorized_keys`
-* The VM ensures the user has passwordless sudo access
+```ruby
+gem "kitchen-opennebula"
+```
+
+...and run `bundle install`.
+
+## Quick start
+
+### 1. Tell the driver where your cloud is
+
+The driver reads the same two environment variables as the `one*` command line tools, so if those already work on your
+machine, so does the driver:
+
+```shell
+export ONE_XMLRPC="http://opennebula.example.com:2633/RPC2"
+export ONE_AUTH="$HOME/.one/one_auth"     # a file containing a single line: username:password
+```
+
+`ONE_AUTH` may hold either a path to a credentials file or the literal `username:password` string. If it is unset, the
+driver falls back to `~/.one/one_auth`. Both settings can also be written into `kitchen.yml` — see
+[Connecting to OpenNebula](#connecting-to-opennebula) — but keeping the password out of a file you commit is the better
+habit.
+
+### 2. Find the template you want to build from
+
+```shell
+onetemplate list
+```
+
+Note either the template's **name** or its **ID**. You will use exactly one of them.
+
+### 3. Write a `kitchen.yml`
+
+```yaml
+---
+driver:
+  name: opennebula
+  template_name: ubuntu-2404       # or: template_id: 42
+  username: ubuntu                 # the login user baked into your image
+  memory: 2048
+  vcpu: 2
+
+transport:
+  name: ssh
+  ssh_key: ~/.ssh/id_rsa           # the private half of the key the driver pushes
+
+provisioner:
+  name: chef_infra
+
+platforms:
+  - name: ubuntu-24.04
+
+suites:
+  - name: default
+    run_list:
+      - recipe[my_cookbook::default]
+```
+
+The `platforms` entry names the instance and tells Test Kitchen whether to treat the guest as Unix or Windows (a name
+starting with `win` means Windows) — but the actual operating system comes from the OpenNebula template, not from this
+name. If you want to test several templates, give each platform its own `driver` block:
+
+```yaml
+platforms:
+  - name: ubuntu-24.04
+    driver:
+      template_name: ubuntu-2404
+  - name: rocky-9
+    driver:
+      template_name: rocky-9
+```
+
+### 4. Run it
+
+```shell
+kitchen create        # build the VM and wait for it to be ready
+kitchen converge      # apply your configuration
+kitchen login         # ssh in and look around
+kitchen verify        # run your tests
+kitchen destroy       # delete the VM
+```
+
+`kitchen test` does the whole cycle in one command.
+
+For everything in `kitchen.yml` that is not driver-specific, see the
+[Test Kitchen configuration reference](https://kitchen.ci/docs/reference/configuration/).
+
+## Preparing a guest image
+
+This driver hands OpenNebula's contextualization system your SSH public key and expects the guest to act on it. Your
+image must:
+
+- **Install the OpenNebula contextualization package** (`one-context`), so that the guest reads the `CONTEXT` section
+  the driver populates.
+- **Install the `SSH_PUBLIC_KEY` context variable** into the login user's `~/.ssh/authorized_keys`. The `one-context`
+  package does this for you.
+- **Give the login user passwordless sudo.** Test Kitchen's provisioners install and run software as root; the driver
+  blocks until `sudo -n true` succeeds, so an image that prompts for a password will hang and then fail.
+
+The driver also sets a `TEST_KITCHEN` context variable to `YES`, which your image can use to enable behaviour that
+should only ever happen in a test VM.
+
+If your image runs `cloud-init`, the driver detects that automatically and waits for it to finish before converging,
+so your provisioner does not race against it.
+
+### Making sure the SSH keys match
+
+This is the single most common thing to get wrong. Two separate settings are involved:
+
+- `driver.public_key_path` — the **public** key the driver pushes into the VM.
+- `transport.ssh_key` — the **private** key Test Kitchen authenticates with.
+
+They must be halves of the same pair. If you leave `public_key_path` unset, the driver pushes the first of
+`~/.ssh/id_rsa.pub`, `~/.ssh/id_dsa.pub`, `~/.ssh/identity.pub`, `~/.ssh/id_ecdsa.pub` or `~/.ssh/id_ed25519.pub` that
+exists — which may not be the key your SSH agent offers first.
 
 ## Configuration
 
-### opennebula\_endpoint
+All of these go under `driver:` in `kitchen.yml`.
 
-URL where the OpenNebula daemon is listening. The default value is taken from the ONE\_XMLRPC environment variable,
-or `http://127.0.0.1:2633/RPC2` if unset.
+### Connecting to OpenNebula
 
-### oneauth\_file
+| Setting | Default | Description |
+| --- | --- | --- |
+| `opennebula_endpoint` | `$ONE_XMLRPC`, else `http://127.0.0.1:2633/RPC2` | URL of the OpenNebula XML-RPC daemon. |
+| `oneauth_file` | `$ONE_AUTH`, else `~/.one/one_auth` | Path to a file holding a single `username:password` line. `$ONE_AUTH` may instead hold the credentials themselves. |
 
-Path to the file containing OpenNebula authentication information.  It should contain a single line stating
-"username:password". The default value is taken from the ONE\_AUTH environment variable, or `$HOME/.one/one_auth` if
-unset.
+### Choosing a template
 
-### template\_name
+Set **exactly one** of `template_name` or `template_id`. Setting neither, or both, is an error.
 
-Name of the VM definition file (OpenNebula template) registered with OpenNebula.  Can be used with `template_uname` or
-`template_uid` to further restrict which template to use if multiple users have the same template name. Only one of
-`template_name` or `template_id` must be specified in the .kitchen.yml file. The default value is unset, or `nil`.
+| Setting | Default | Description |
+| --- | --- | --- |
+| `template_name` | none | Name of the OpenNebula template to build from. |
+| `template_id` | none | ID of the OpenNebula template to build from. |
+| `template_uname` | none | Owner's username, to disambiguate when several users have a template of the same name. Only used with `template_name`. |
+| `template_uid` | none | Owner's UID, for the same purpose. **Must be quoted** — see [Troubleshooting](#troubleshooting). |
 
-### template\_id
+### Shaping the VM
 
-ID of the VM definition file (OpenNebula template) registered with OpenNebula.  Only one of `template_name` or
-`template_id` must be specified in the .kitchen.yml file. The default value is unset, or `nil`.
+| Setting | Default | Description |
+| --- | --- | --- |
+| `vm_hostname` | instance name plus a random suffix, e.g. `default-ubuntu-2404-h3k9qm1z` | Name given to the VM in OpenNebula. The random suffix lets several runs of the same suite coexist. |
+| `username` | `local` | Login user for the VM. This is also what Test Kitchen's transport uses to connect, and it takes precedence over `transport.username`. |
+| `public_key_path` | first existing of `~/.ssh/id_rsa.pub`, `~/.ssh/id_dsa.pub`, `~/.ssh/identity.pub`, `~/.ssh/id_ecdsa.pub`, `~/.ssh/id_ed25519.pub` | Public key pushed into the VM as `SSH_PUBLIC_KEY`. |
+| `memory` | `512` | Memory in MB. Overrides the template. |
+| `vcpu` | `1` | Number of virtual CPUs. Overrides the template. |
+| `cpu` | `1` | Physical CPU share, where `1` is one full core. May be fractional. Overrides the template. |
+| `context_variables` | `{}` | Extra variables merged into the template's `CONTEXT` section. These override anything the template sets, including the driver's own `SSH_PUBLIC_KEY` and `TEST_KITCHEN`. |
+| `user_variables` | `{}` | Extra variables merged into the template's user template section. |
 
-### template\_uname
+Networking and disks come from the OpenNebula template; the driver does not configure them.
 
-Username who owns the VM definition file (OpenNebula template).  Can be used with `template_name` to address naming
-conflicts where multiple users have the same template name. The default value is unset, or `nil`.
+### Waiting for the VM to be ready
 
-### template\_uid
+After OpenNebula reports the VM as running, the driver runs three checks in order: the transport connectivity check,
+the passwordless sudo check, and — only if cloud-init is detected — the cloud-init completion check. Each can be tuned
+or skipped.
 
-UID of the user who owns the VM definition file (OpenNebula template).  Can be used with `template_name` to address
-naming conflicts where multiple users have the same template name. The default value is unset, or `nil`.
+| Setting | Default | Description |
+| --- | --- | --- |
+| `wait_for` | `600` | Seconds to wait for OpenNebula to report the VM as running. |
+| `no_ssh_tcp_check` | `false` | Skip the connectivity check and sleep instead. |
+| `no_ssh_tcp_check_sleep` | `120` | Seconds to sleep when `no_ssh_tcp_check` is set. |
+| `no_passwordless_sudo_check` | `false` | Skip the sudo check and sleep instead. |
+| `no_passwordless_sudo_sleep` | `120` | Seconds to sleep when `no_passwordless_sudo_check` is set. |
+| `passwordless_sudo_timeout` | `300` | Seconds to keep retrying the sudo check before giving up. |
+| `passwordless_sudo_retry_interval` | `10` | Seconds between sudo retries. |
+| `no_cloud_init_check` | `false` | Never wait for cloud-init, even if it is running. |
+| `cloud_init_timeout` | `600` | Seconds to wait for cloud-init to finish. |
+| `cloud_init_retry_interval` | `10` | Seconds between cloud-init polls. |
 
-### vm\_hostname
+The `no_*` settings trade a real readiness check for a fixed sleep. They are an escape hatch for images the checks
+cannot handle, not a speed-up — reach for them only after the real check has proven unworkable.
 
-Hostname to set for the newly created VM. The default value is the Test Kitchen instance name followed by a random
-eight character suffix, for example `default-ubuntu-2404-h3k9qm1z`, so that several runs of the same suite can coexist
-in one OpenNebula cloud.
+### Settings that are not the driver's
 
-### public\_key\_path
+`require_chef_omnibus` is often seen in a `driver` block in older examples. It belongs to the Chef provisioner, and
+Test Kitchen quietly moves it there for you. Configure Chef installation on `provisioner:` instead.
 
-Path to SSH public key to pass to the VM, to use to authenticate with `username` when logging in or converging a node.
-The default is the first of `~/.ssh/id_rsa.pub`, `~/.ssh/id_dsa.pub`, `~/.ssh/identity.pub`, `~/.ssh/id_ecdsa.pub` or
-`~/.ssh/id_ed25519.pub` that is present on the filesystem. If none of them exist, set this explicitly -- the driver
-fails with a message telling you to do so rather than trying to create the VM.
+## Troubleshooting
 
-### username
+| Message | What it means |
+| --- | --- |
+| `template_name or template_id not specified in .kitchen.yml` | Neither was set. Set exactly one. |
+| `Only one of template_name or template_id should be specified` | Both were set. Remove one. |
+| `Could not find template to create VM. -- Verify your template filters and one_auth credentials` | Nothing matched. Check the name or ID with `onetemplate list`, and check that the account in your credentials can actually see that template. |
+| `More than one template found. Please restrict using template_uname` | Several users own a template of that name. Add `template_uname`, or switch to `template_id`. |
+| `Could not find one_auth file ...` | `ONE_AUTH` and `oneauth_file` both point at nothing. Create the file or export the credentials. |
+| `OpenNebula credentials must be in 'username:password' form` | The credentials file or `ONE_AUTH` value is empty or missing the colon. |
+| `Could not find an SSH public key. Set public_key_path in .kitchen.yml.` | No key was found in `~/.ssh`. Generate one, or set `public_key_path` explicitly. |
+| `Passwordless sudo was not ready on <instance> after 300 seconds` | The login user cannot `sudo` without a password. Fix the image, or raise `passwordless_sudo_timeout` if it is simply slow to configure. |
+| `Cloud-init failed on <instance>` | Cloud-init ran and reported failure. `kitchen login` and check `cloud-init analyze dump` — this is a problem in the image, not the driver. |
+| `Cloud-init did not finish on <instance> after 600 seconds` | Cloud-init is still working. Raise `cloud_init_timeout`, or set `no_cloud_init_check: true` if you do not need to wait for it. |
 
-This is the username used for SSH authentication to the new VM. The default value is `local`.
+### `template_uid` appears to be ignored
 
-### memory
+`template_uid` and `template_uname` are only applied as filters when they are **strings**. Written unquoted, a numeric
+UID is parsed by YAML as an integer and silently ignored:
 
-The amount of memory to provision for the new VM.  This parameter will override the memory settings provided in the
-VM template. The default value is 512MB.
+```yaml
+template_uid: 0        # ignored
+template_uid: "0"      # works
+```
 
-### vcpu
+### The VM builds, but Test Kitchen cannot log in
 
-The number of virtual CPUs to provision for the new VM. This parameter will override the VCPU setting provided in the
-VM template. The default value is 1.
+Almost always a key mismatch — see [Making sure the SSH keys match](#making-sure-the-ssh-keys-match). Confirm the
+driver pushed the key you expected by checking the VM's context in OpenNebula, then confirm `transport.ssh_key` is its
+private half.
 
-### cpu
+### Seeing what the driver decided
 
-The amount of physical CPU allocated to the new VM, as understood by OpenNebula (a float, where 1 means one full core).
-This parameter will override the CPU setting provided in the VM template. The default value is 1.
+```shell
+kitchen diagnose --all
+```
 
-### user\_variables
-
-A hash of variables to pass into the "user template" section of the VM, to customize the virtual machine. The default
-value is `{}`.
-
-### context\_variables
-
-A hash of variables to pass into the "CONTEXT" section of the VM, to further customize the virtual machine. These
-variables override any existing context variables that are provided as part of the specified VM template. The default
-value is `{}`.
-
-### require\_chef\_omnibus
-
-Determines whether or not a Chef [Omnibus package][chef_omnibus_dl] will be
-installed. There are several different behaviors available:
-
-* `true` - the latest release will be installed. Subsequent converges will skip re-installing if chef is present.
-* `latest` - the latest release will be installed. Subsequent converges will always re-install even if chef is present.
-* `<VERSION_STRING>` (ex: `10.24.0`) - the desired version string will be passed the the install.sh script.
-Subsequent converges will skip if the installed version and the desired version match.
-* `false` or `nil` - no chef is installed.
-
-The default value is unset, or `nil`.
-
-### wait_for
-
-This variable is used to override timeout for Fog's common `wait_for` method which states that it "takes a block and
-waits for either the block to return true for the object or for a timeout (defaults to 10 minutes)".
-
-### no\_ssh\_tcp\_check
-
-To avoid test-kitchen's ssh tcp check in the create phase you can set `no_ssh_tcp_check` to `true` and do single sleep
-instead. Sleep period is configured by `no_ssh_tcp_check_sleep`. The default for `no_ssh_tcp_check` is set to `false`.
-
-### no\_ssh\_tcp\_check\_sleep
-
-This variable configures a single sleep used when `no_ssh_tcp_check` is set to `true`. The default for `no_ssh_tcp_check`
-is 2 minutes.
-
-### no\_passwordless\_sudo\_check
-
-To avoid test-kitchen's passwordless sudo check in the create phase you can set `no_passwordless_sudo_check` to `true`
-and do single sleep instead. Sleep period is configured by `no_passwordless_sudo_sleep`. The default for
-`no_passwordless_sudo_check` is set to `false`.
-
-### no\_passwordless\_sudo\_sleep
-
-This variable configures a single sleep used when `no_passwordless_sudo_check` is set to `true`. The default for
-`no_passwordless_sudo_sleep` is 2 minutes.
-
-### passwordless\_sudo\_timeout
-
-This variable configures the max timeout will wait in the create phase for passwordless sudo to be setup. The variable
-is used when `no_passwordless_sudo_check` is set to `false`. The default for `passwordless_sudo_timeout` is 5 minutes.
-
-### passwordless\_sudo\_retry\_interval
-
-This variable configures retry interval in the create phase to periodically check that passwordless sudo is setup. It
-does this until max timeout (set by `passwordless_sudo_timeout`) is reached. The variable is used when
-`no_passwordless_sudo_check` is set to `false`. The default for `passwordless_sudo_retry_interval` is 10 seconds.
-
-### cloud\_init\_timeout
-
-This variable configures the max timeout Test-Kitchen will wait in the create phase for cloud-init to complete. The
-default for `cloud_init_timeout` is 10 minutes.
-
-### cloud\_init\_retry\_interval
-
-This variable configures retry interval in the create phase to periodically check that cloud-init fas finished
-successfully. It does this until max timeout (set by `cloud_init_timeout`) is reached. The variable is used when
-`no_cloud_init_check` is set to `false`. The default for `cloud_init_retry_interval` is 10 seconds.
-
-### no\_cloud\_init\_check
-
-To avoid test-kitchen to check for cloud-init completion in the create phase, you can set `no_cloud_init_check` to `true`
-and cloud-init completion check will be ignored. If cloud-init is not used the check is skipped automatically. You could
-use this to disable the cloud-init completion check when cloud-init is in use. The default for `no_cloud_init_check`
-is set to `false`.
+This prints every setting the driver resolved, including the defaults and anything it read from the environment.
 
 ## Development
 
-* Source hosted at [GitHub][repo]
-* Report issues/questions/feature requests on [GitHub Issues][issues]
-
-Pull requests are very welcome! Make sure your patches are well tested.
-Ideally create a topic branch for every separate change you make. For example:
-
-1. Fork the repo
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Added some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
-
-### Running the tests
+Source is hosted at [GitHub](https://github.com/test-kitchen/kitchen-opennebula); issues and questions go to
+[GitHub Issues](https://github.com/test-kitchen/kitchen-opennebula/issues).
 
 ```shell
 bundle install
@@ -201,24 +267,18 @@ bundle exec rake           # both
 The unit tests are self-contained: they never contact an OpenNebula endpoint, never read the real `~/.ssh` or
 `~/.one`, and never sleep. The suite enforces 100% line and branch coverage of `lib/`.
 
-### Building the API documentation
-
-API documentation is written as [YARD](https://yardoc.org/) comments. YARD lives in the `:development` bundle group and
-is deliberately not part of the default task, so documentation is never a merge gate.
+API documentation is written as [YARD](https://yardoc.org/) comments. YARD lives in the `:development` bundle group
+and is deliberately not part of the default task, so documentation is never a merge gate.
 
 ```shell
-bundle config unset without
-bundle install
+bundle config unset without && bundle install
 bundle exec rake doc           # render HTML into doc/
 bundle exec rake doc_coverage  # list anything still undocumented
 ```
 
+Pull requests are very welcome. Please make sure your patches are tested, and ideally create a topic branch for every
+separate change.
+
 ## License
 
-Apache 2.0 (see [LICENSE][license])
-
-
-[issues]:           https://github.com/test-kitchen/kitchen-opennebula/issues
-[license]:          https://github.com/test-kitchen/kitchen-opennebula/blob/master/LICENSE
-[repo]:             https://github.com/test-kitchen/kitchen-opennebula
-[chef_omnibus_dl]:  http://www.getchef.com/chef/install/
+Apache 2.0 — see [LICENSE](LICENSE).
