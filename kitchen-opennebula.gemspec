@@ -1,10 +1,9 @@
-# coding: utf-8
-lib = File.expand_path("../lib", __FILE__)
+lib = File.expand_path("lib", __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require "kitchen/driver/opennebula_version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "kitchen-opennebula"
+  spec.name = "kitchen-opennebula"
   spec.required_ruby_version = ">= 3.1"
   spec.version       = Kitchen::Driver::OPENNEBULA_VERSION
   spec.authors       = [ "BlackBerry Automation Engineering" ]
@@ -16,7 +15,6 @@ Gem::Specification.new do |spec|
 
   spec.files         = `git ls-files`.split($/)
   spec.executables   = []
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
   spec.add_dependency "test-kitchen", ">= 1.2", "< 5.0"
