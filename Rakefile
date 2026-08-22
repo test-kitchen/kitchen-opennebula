@@ -1,4 +1,9 @@
 require "bundler/gem_tasks"
+require "rspec/core/rake_task"
+
+RSpec::Core::RakeTask.new(:test) do |t|
+  t.pattern = "spec/**/*_spec.rb"
+end
 require "rubocop/rake_task"
 require "cookstyle/chefstyle"
 
@@ -9,10 +14,4 @@ RuboCop::RakeTask.new(:rubocop) do |task|
   task.fail_on_error = false
 end
 
-desc "Display LOC stats"
-task :loc do
-  puts "\n## LOC Stats"
-  sh "countloc -r lib/kitchen"
-end
-
-task default: %i{rubocop loc}
+task default: %i{test rubocop}
