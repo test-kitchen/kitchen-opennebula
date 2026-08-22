@@ -1,5 +1,7 @@
 # Kitchen::Opennebula
 
+[![Gem Version](https://badge.fury.io/rb/kitchen-opennebula.svg)](https://badge.fury.io/rb/kitchen-opennebula)
+
 A Test Kitchen Driver for Opennebula.
 
 ## Requirements
