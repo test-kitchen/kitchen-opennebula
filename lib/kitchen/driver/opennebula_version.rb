@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Test Kitchen's top level namespace.
 module Kitchen
 
+  # Namespace for Test Kitchen drivers.
   module Driver
 
     # Version string for Opennebula Kitchen driver
