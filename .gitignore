@@ -1,4 +1,9 @@
 .project
 .idea
+.rspec_status
+.yardoc
 Gemfile.lock
+coverage
+doc
 pkg
+vendor/bundle

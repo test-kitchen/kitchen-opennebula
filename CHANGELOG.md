@@ -1,3 +1,44 @@
+## Unreleased
+
+### Fixed
+
+* `converge` and `verify` called `super`, but `Kitchen::Driver::Base` defines neither -- both raised `NoMethodError`
+  when called. They were no-ops by intent (converging and verifying belong to the provisioner and verifier), so they
+  have been removed.
+* `create` never called `super`, so the `pre_create_command` setting every driver inherits from Test Kitchen was
+  silently ignored.
+* `opennebula_endpoint` and `oneauth_file` read `ONE_XMLRPC` / `ONE_AUTH` when the driver file was *loaded* rather
+  than when the setting was read, so environment variables exported after Test Kitchen started were ignored. They are
+  now evaluated lazily, per instance.
+* `vm_hostname` generated a new random suffix on every read, so `kitchen diagnose` reported a hostname the VM never
+  had. The generated name is now memoized per instance.
+* `kitchen destroy` on an instance that was never created called `servers.destroy(nil)`. It is now a no-op that does
+  not even open a connection, and a successful destroy clears `vm_id` and `hostname` from the state.
+* Credentials were split on every `:`, truncating any password containing a colon, and the trailing newline of
+  `~/.one/one_auth` was passed through as part of the password. Credentials are now stripped and split once.
+  Malformed credentials produce a clear error instead of a confusing authentication failure.
+* An empty `ONE_AUTH` produced the error "Could not find one_auth file" with a blank path. It is now treated as unset.
+* The driver referenced `Kitchen::Transport::SshFailed` in its `rescue` clauses without requiring the SSH transport.
+  With any other transport configured, the rescue itself raised `NameError` and masked the real error.
+* Timeouts were measured with `Time.now`, so an NTP or DST adjustment mid-run could extend or cut short a wait. They
+  now use a monotonic clock.
+* The passwordless sudo and cloud-init probes logged elapsed time as "time left", and on timeout raised the raw SSH
+  error rather than saying the wait had timed out.
+* The passwordless sudo retry matched the failure by exact string comparison against one hard-coded message; it now
+  matches on the remote exit status.
+* A missing or unreadable `public_key_path` reached `File.read(nil)` and raised `TypeError`. It now raises a
+  `Kitchen::UserError` naming the problem.
+* Template misconfiguration now raises `Kitchen::UserError`, which Test Kitchen reports as a user-facing message,
+  instead of a bare `RuntimeError` with a stack trace.
+
+### Added
+
+* A full RSpec unit test suite with 100% line and branch coverage of `lib/`, enforced by SimpleCov.
+* YARD documentation for every module, class, constant and method.
+* `~/.ssh/id_ed25519.pub` is now searched when discovering a default `public_key_path`.
+* The driver declares `kitchen_driver_api_version 2`.
+* README documentation for the `vcpu` and `cpu` settings, which were implemented but undocumented.
+
 ## 0.3.0
 
 * fix endless loop in passwordless sudo check

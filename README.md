@@ -6,8 +6,8 @@ A Test Kitchen Driver for Opennebula.
 
 ## Requirements
 
-This driver depends on [fog](https://github.com/fog/fog). Please note possibility that unreleased changes on master
-branch may depend on patches that can be found at <https://github.com/blackberry/fog> until they are merged to upstream.
+This driver talks to OpenNebula's XML-RPC API through [fog-opennebula](https://github.com/fog/fog-opennebula) and
+requires Ruby 3.1 or later.
 
 ## Installation and Setup
 
@@ -66,13 +66,16 @@ naming conflicts where multiple users have the same template name. The default v
 
 ### vm\_hostname
 
-Hostname to set for the newly created VM. The default value is `driver.instance.name`
+Hostname to set for the newly created VM. The default value is the Test Kitchen instance name followed by a random
+eight character suffix, for example `default-ubuntu-2404-h3k9qm1z`, so that several runs of the same suite can coexist
+in one OpenNebula cloud.
 
 ### public\_key\_path
 
 Path to SSH public key to pass to the VM, to use to authenticate with `username` when logging in or converging a node.
-The default value is `~/.ssh/id_rsa.pub`, `~/.ssh/id_dsa.pub`, `~/.ssh/identity.pub`, or `~/.ssh/id_ecdsa.pub`,
-whichever is present on the filesystem.
+The default is the first of `~/.ssh/id_rsa.pub`, `~/.ssh/id_dsa.pub`, `~/.ssh/identity.pub`, `~/.ssh/id_ecdsa.pub` or
+`~/.ssh/id_ed25519.pub` that is present on the filesystem. If none of them exist, set this explicitly -- the driver
+fails with a message telling you to do so rather than trying to create the VM.
 
 ### username
 
@@ -82,6 +85,16 @@ This is the username used for SSH authentication to the new VM. The default valu
 
 The amount of memory to provision for the new VM.  This parameter will override the memory settings provided in the
 VM template. The default value is 512MB.
+
+### vcpu
+
+The number of virtual CPUs to provision for the new VM. This parameter will override the VCPU setting provided in the
+VM template. The default value is 1.
+
+### cpu
+
+The amount of physical CPU allocated to the new VM, as understood by OpenNebula (a float, where 1 means one full core).
+This parameter will override the CPU setting provided in the VM template. The default value is 1.
 
 ### user\_variables
 
@@ -175,6 +188,30 @@ Ideally create a topic branch for every separate change you make. For example:
 3. Commit your changes (`git commit -am 'Added some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
+
+### Running the tests
+
+```shell
+bundle install
+bundle exec rake test      # RSpec unit tests
+bundle exec rake rubocop   # Cookstyle/Chefstyle
+bundle exec rake           # both
+```
+
+The unit tests are self-contained: they never contact an OpenNebula endpoint, never read the real `~/.ssh` or
+`~/.one`, and never sleep. The suite enforces 100% line and branch coverage of `lib/`.
+
+### Building the API documentation
+
+API documentation is written as [YARD](https://yardoc.org/) comments. YARD lives in the `:development` bundle group and
+is deliberately not part of the default task, so documentation is never a merge gate.
+
+```shell
+bundle config unset without
+bundle install
+bundle exec rake doc           # render HTML into doc/
+bundle exec rake doc_coverage  # list anything still undocumented
+```
 
 ## License
 
