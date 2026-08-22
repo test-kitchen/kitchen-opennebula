@@ -5,6 +5,7 @@ require "kitchen/driver/opennebula_version"
 
 Gem::Specification.new do |spec|
   spec.name          = "kitchen-opennebula"
+  spec.required_ruby_version = ">= 3.1"
   spec.version       = Kitchen::Driver::OPENNEBULA_VERSION
   spec.authors       = [ "BlackBerry Automation Engineering" ]
   spec.email         = [ "nonesuch@blackberry.com" ]
@@ -19,12 +20,10 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "test-kitchen", ">= 1.2", "< 5.0"
-  spec.add_dependency "fog", ">= 1.30", "< 3.0"
+  spec.add_dependency "fog-opennebula", ">= 0.0.5"
   spec.add_dependency "opennebula", ">= 4.10"
 
-  spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake"
+  spec.add_development_dependency "rspec"
 
-  spec.add_development_dependency "chefstyle"
-  spec.add_development_dependency "countloc"
 end
