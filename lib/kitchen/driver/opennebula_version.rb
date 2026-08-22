@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 #
 # Copyright (C) 2019, BlackBerry, Ltd.
 #

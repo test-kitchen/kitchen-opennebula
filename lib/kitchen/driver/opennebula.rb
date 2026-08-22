@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 #
 # Copyright (C) 2019, BlackBerry, Ltd.
 #
@@ -156,7 +155,7 @@ module Kitchen
             conn.execute("sudo -n true > /dev/null 2>&1")
           end
         rescue Kitchen::Transport::SshFailed => e
-          duration = ((Time.now - started) * 1000).ceil / 1000.to_i
+          duration = ((Time.now - started) * 1000).ceil / 1000
           if (e.message.eql? "SSH exited (1) for command: [sudo -n true > /dev/null 2>&1]") && (duration <= timeout)
             info("Probing for passwordless sudo ready on #{instance.to_str}, time left #{duration}/#{timeout} secs")
             sleep retry_interval
@@ -176,10 +175,10 @@ module Kitchen
             conn.execute("ps -ef | grep cloud-init | grep -v grep >/dev/null 2>&1; exit $?")
           end
           info("Cloud-init is running on #{instance.to_str}")
-          return true
+          true
         rescue
           info("Cloud-init not running on #{instance.to_str}")
-          return false
+          false
         end
       end
 
@@ -194,7 +193,7 @@ if [[ $out =~ "SUCCESS" ]]; then exit 0; elif [[ $out =~ "FAIL" ]]; then exit 11
             conn.execute(cmd)
           end
         rescue Kitchen::Transport::SshFailed => e
-          duration = ((Time.now - started) * 1000).ceil / 1000.to_i
+          duration = ((Time.now - started) * 1000).ceil / 1000
           if (e.message.match(/SSH exited \(11\) for command: \[out=\$\(cloud-init analyze dump/)) && (duration <= timeout)
             error("Cloud-init failed on #{instance.to_str}")
           elsif (e.message.match(/SSH exited \(99\) for command: \[out=\$\(cloud-init analyze dump/)) && (duration <= timeout)
