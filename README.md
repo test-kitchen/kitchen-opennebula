@@ -9,7 +9,7 @@ branch may depend on patches that can be found at <https://github.com/blackberry
 
 ## Installation and Setup
 
-1. Download and install latest [ChefDK](https://downloads.chef.io/chef-dk/).
+1. Download and install latest [ChefDK](https://downloads.chef.io/tools/workstation).
 2. Please add bin locations to your PATH:
 
    - `C:\opscode\chefdk\bin;C:\opscode\chefdk\embedded\bin\` (windows)
@@ -19,7 +19,7 @@ branch may depend on patches that can be found at <https://github.com/blackberry
 4. Run following command:
     gem install kitchen-opennebula --no-user-install --no-ri --no-rdoc
 
-Please read the [config_yml_kitchen](https://docs.chef.io/config_yml_kitchen.html) page for more details.
+Please read the [config_yml_kitchen](https://kitchen.ci/docs/reference/) page for more details.
 
 ## Virtual Machine Requirements
 
