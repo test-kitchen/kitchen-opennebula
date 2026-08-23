@@ -1,5 +1,9 @@
 ## Unreleased
 
+* Docs: lead with Cinc and split contributor docs ([#41](https://github.com/test-kitchen/kitchen-opennebula/pull/41)) ([eb0a0ba](https://github.com/test-kitchen/kitchen-opennebula/commit/eb0a0ba))
+
+## [0.3.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula-v0.2.3...kitchen-opennebula/v0.3.0) (2026-08-23)
+
 ### Fixed
 
 * `converge` and `verify` called `super`, but `Kitchen::Driver::Base` defines neither -- both raised `NoMethodError`
@@ -39,7 +43,6 @@
 * The driver declares `kitchen_driver_api_version 2`.
 * README documentation for the `vcpu` and `cpu` settings, which were implemented but undocumented.
 
-## [0.3.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula-v0.2.3...kitchen-opennebula/v0.3.0) (2026-08-23)
 
 ### Bug Fixes
 
