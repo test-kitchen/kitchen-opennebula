@@ -39,6 +39,14 @@
 * The driver declares `kitchen_driver_api_version 2`.
 * README documentation for the `vcpu` and `cpu` settings, which were implemented but undocumented.
 
+## [0.3.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula-v0.2.3...kitchen-opennebula/v0.3.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* bump tk dep to allow tk 4 ([#36](https://github.com/test-kitchen/kitchen-opennebula/issues/36)) ([5aa2aa2](https://github.com/test-kitchen/kitchen-opennebula/commit/5aa2aa20a398a13d5fe09350231f76a57e3984ff))
+* correct release-please manifest to last published version ([#44](https://github.com/test-kitchen/kitchen-opennebula/issues/44)) ([e04145b](https://github.com/test-kitchen/kitchen-opennebula/commit/e04145b1873daab56d14d646824dc5d8a55d61e8))
+
 ## 0.3.0
 
 * fix endless loop in passwordless sudo check
