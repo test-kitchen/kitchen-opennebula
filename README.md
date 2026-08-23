@@ -12,12 +12,15 @@ template, waits until the VM is genuinely ready to be configured, and hands it o
 Everything else — how the machine is configured, how it's tested, how you connect to it — is handled by Test Kitchen's
 other plugins and is the same as it would be on any other cloud.
 
+> This documentation uses [Cinc Workstation](https://cinc.sh/) and the `cinc` commands throughout. Everything here
+> works identically with Chef Workstation — see [Using with Chef](#using-with-chef).
+
 ## Before you start
 
 You will need:
 
-- **Ruby 3.1 or newer**, and Test Kitchen. If you use [Chef Workstation](https://www.chef.io/downloads), you already
-  have both.
+- **Ruby 3.1 or newer**, and Test Kitchen. If you use [Cinc Workstation](https://cinc.sh/start/workstation/), you
+  already have both.
 - **An OpenNebula cloud you can reach**, specifically its XML-RPC endpoint (typically port 2633).
 - **OpenNebula credentials**, in the usual `username:password` form.
 - **A registered OpenNebula template** to build VMs from, whose guest image meets the
@@ -25,10 +28,11 @@ You will need:
 
 ## Installation
 
-If you are using Chef Workstation, install the gem into its Ruby:
+This driver ships as part of [Cinc Workstation](https://cinc.sh/start/workstation/). If you have Cinc Workstation
+installed, there is nothing else to install. To install it into a standalone Ruby:
 
 ```shell
-chef gem install kitchen-opennebula
+gem install kitchen-opennebula
 ```
 
 Otherwise add it to your project's `Gemfile`:
@@ -80,7 +84,7 @@ transport:
   ssh_key: ~/.ssh/id_rsa           # the private half of the key the driver pushes
 
 provisioner:
-  name: chef_infra
+  name: cinc_infra
 
 platforms:
   - name: ubuntu-24.04
@@ -108,14 +112,14 @@ platforms:
 ### 4. Run it
 
 ```shell
-kitchen create        # build the VM and wait for it to be ready
-kitchen converge      # apply your configuration
-kitchen login         # ssh in and look around
-kitchen verify        # run your tests
-kitchen destroy       # delete the VM
+cinc kitchen create        # build the VM and wait for it to be ready
+cinc kitchen converge      # apply your configuration
+cinc kitchen login         # ssh in and look around
+cinc kitchen verify        # run your tests
+cinc kitchen destroy       # delete the VM
 ```
 
-`kitchen test` does the whole cycle in one command.
+`cinc kitchen test` does the whole cycle in one command.
 
 For everything in `kitchen.yml` that is not driver-specific, see the
 [Test Kitchen configuration reference](https://kitchen.ci/docs/reference/configuration/).
@@ -210,8 +214,8 @@ cannot handle, not a speed-up — reach for them only after the real check has p
 
 ### Settings that are not the driver's
 
-`require_chef_omnibus` is often seen in a `driver` block in older examples. It belongs to the Chef provisioner, and
-Test Kitchen quietly moves it there for you. Configure Chef installation on `provisioner:` instead.
+`require_chef_omnibus` is often seen in a `driver` block in older examples. It belongs to the provisioner, and
+Test Kitchen quietly moves it there for you. Configure client installation on `provisioner:` instead.
 
 ## Troubleshooting
 
@@ -252,32 +256,28 @@ kitchen diagnose --all
 
 This prints every setting the driver resolved, including the defaults and anything it read from the environment.
 
-## Development
+## Using with Chef
 
-Source is hosted at [GitHub](https://github.com/test-kitchen/kitchen-opennebula); issues and questions go to
-[GitHub Issues](https://github.com/test-kitchen/kitchen-opennebula/issues).
+This driver is not tied to Cinc. The examples above use Cinc Workstation and the `cinc_infra` provisioner, but the
+driver works exactly the same with [Chef Workstation](https://www.chef.io/downloads/tools/workstation) — run
+`kitchen` instead of `cinc kitchen`, and use `chef_infra` instead of `cinc_infra`:
 
-```shell
-bundle install
-bundle exec rake test      # RSpec unit tests
-bundle exec rake rubocop   # Cookstyle/Chefstyle
-bundle exec rake           # both
+```yaml
+provisioner:
+  name: chef_infra
+
+verifier:
+  name: inspec
 ```
 
-The unit tests are self-contained: they never contact an OpenNebula endpoint, never read the real `~/.ssh` or
-`~/.one`, and never sleep. The suite enforces 100% line and branch coverage of `lib/`.
+No driver configuration changes are needed.
 
-API documentation is written as [YARD](https://yardoc.org/) comments. YARD lives in the `:development` bundle group
-and is deliberately not part of the default task, so documentation is never a merge gate.
+## Contributing
 
-```shell
-bundle config unset without && bundle install
-bundle exec rake doc           # render HTML into doc/
-bundle exec rake doc_coverage  # list anything still undocumented
-```
-
-Pull requests are very welcome. Please make sure your patches are tested, and ideally create a topic branch for every
-separate change.
+Bug reports and pull requests are welcome on
+[GitHub](https://github.com/test-kitchen/kitchen-opennebula). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for development setup, how to run the tests, how to generate the API
+documentation, and the release process.
 
 ## License
 
