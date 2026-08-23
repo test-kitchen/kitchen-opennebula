@@ -18,14 +18,13 @@ end
 begin
   require "yard"
 
-  YARD::Rake::YardocTask.new(:doc) do |t|
-    t.files = ["lib/**/*.rb"]
-    t.options = ["--no-private", "--markup", "markdown"]
-  end
+  # Options and file list live in .yardopts so that a bare `yard` from the
+  # command line produces exactly what `rake doc` does.
+  YARD::Rake::YardocTask.new(:doc)
 
   desc "List anything in lib/ that is still undocumented"
   task :doc_coverage do
-    sh "yard stats --list-undoc lib/**/*.rb"
+    sh "yard stats --list-undoc"
   end
 rescue LoadError
   desc "Generate YARD documentation (not installed)"
