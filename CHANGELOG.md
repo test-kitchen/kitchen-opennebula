@@ -39,22 +39,32 @@
 * The driver declares `kitchen_driver_api_version 2`.
 * README documentation for the `vcpu` and `cpu` settings, which were implemented but undocumented.
 
-### Other Changes
+## [0.3.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula-v0.2.3...kitchen-opennebula/v0.3.0) (2026-08-23)
+
+### Bug Fixes
 
 * bump tk dep to allow tk 4 ([#36](https://github.com/test-kitchen/kitchen-opennebula/issues/36)) ([5aa2aa2](https://github.com/test-kitchen/kitchen-opennebula/commit/5aa2aa20a398a13d5fe09350231f76a57e3984ff))
 * correct release-please manifest to last published version ([#44](https://github.com/test-kitchen/kitchen-opennebula/issues/44)) ([e04145b](https://github.com/test-kitchen/kitchen-opennebula/commit/e04145b1873daab56d14d646824dc5d8a55d61e8))
 
+### Other Changes
+
+* Update README.md ([3cc5643](https://github.com/test-kitchen/kitchen-opennebula/commit/3cc5643))
+* Merge pull request #1 from blackberry/0.1.1_release ([#23](https://github.com/test-kitchen/kitchen-opennebula/pull/23)) ([98e345d](https://github.com/test-kitchen/kitchen-opennebula/commit/98e345d))
+* Provide a clean separation between cloud-init and Chef's kitchen ([#24](https://github.com/test-kitchen/kitchen-opennebula/pull/24)) ([56ef90c](https://github.com/test-kitchen/kitchen-opennebula/commit/56ef90c))
+* Allow for Test Kitchen 2, add travis testing, use Chefstyle ([#29](https://github.com/test-kitchen/kitchen-opennebula/pull/29)) ([3436d14](https://github.com/test-kitchen/kitchen-opennebula/commit/3436d14))
+* Upgrade to GitHub-native Dependabot ([#31](https://github.com/test-kitchen/kitchen-opennebula/pull/31)) ([853c885](https://github.com/test-kitchen/kitchen-opennebula/commit/853c885))
+* Update test-kitchen requirement from &gt;= 1.2, &lt; 3.0 to &gt;= 1.2, &lt; 4.0 ([#32](https://github.com/test-kitchen/kitchen-opennebula/pull/32)) ([59c5ef0](https://github.com/test-kitchen/kitchen-opennebula/commit/59c5ef0))
+* Update fog requirement from ~&gt; 1.30 to &gt;= 1.30, &lt; 3.0 ([#25](https://github.com/test-kitchen/kitchen-opennebula/pull/25)) ([7246367](https://github.com/test-kitchen/kitchen-opennebula/commit/7246367))
+* Configure Renovate ([#33](https://github.com/test-kitchen/kitchen-opennebula/pull/33)) ([2d3cd75](https://github.com/test-kitchen/kitchen-opennebula/commit/2d3cd75))
+* Require Ruby 3.1+ and modernize CI ([#37](https://github.com/test-kitchen/kitchen-opennebula/pull/37)) ([3d8c17f](https://github.com/test-kitchen/kitchen-opennebula/commit/3d8c17f))
+* Let cookstyle decide which files to lint ([#38](https://github.com/test-kitchen/kitchen-opennebula/pull/38)) ([2ae86bc](https://github.com/test-kitchen/kitchen-opennebula/commit/2ae86bc))
+* Add a comprehensive unit test suite, YARD docs, and fix the bugs it found ([#39](https://github.com/test-kitchen/kitchen-opennebula/pull/39)) ([c23d99a](https://github.com/test-kitchen/kitchen-opennebula/commit/c23d99a))
+* Rewrite the README for someone who has never used this driver ([#40](https://github.com/test-kitchen/kitchen-opennebula/pull/40)) ([9fef5ec](https://github.com/test-kitchen/kitchen-opennebula/commit/9fef5ec))
+* Add release-please configuration ([#42](https://github.com/test-kitchen/kitchen-opennebula/pull/42)) ([192ba34](https://github.com/test-kitchen/kitchen-opennebula/commit/192ba34))
+
+
 * fix endless loop in passwordless sudo check
 * wait for cloud-init to complete successfully
-
-## 0.1.1 (2015-01-16)
-
-* Initial commit ([c71113e](https://github.com/test-kitchen/kitchen-opennebula/commit/c71113e))
-* Initial release of kitchen-opennebula ([#1](https://github.com/test-kitchen/kitchen-opennebula/pull/1)) ([a45e4b0](https://github.com/test-kitchen/kitchen-opennebula/commit/a45e4b0))
-* Adding fog runtime dependency ([#2](https://github.com/test-kitchen/kitchen-opennebula/pull/2)) ([9dc57a7](https://github.com/test-kitchen/kitchen-opennebula/commit/9dc57a7))
-* kitchen-opennebula: 0.1.1 release ([#5](https://github.com/test-kitchen/kitchen-opennebula/pull/5)) ([5b165c7](https://github.com/test-kitchen/kitchen-opennebula/commit/5b165c7))
-
-* Initial release
 
 ## 0.2.3
 
@@ -93,3 +103,12 @@
 * Mulitiple NIC Fix ([#8](https://github.com/test-kitchen/kitchen-opennebula/pull/8)) ([ce554e1](https://github.com/test-kitchen/kitchen-opennebula/commit/ce554e1))
 * Update README.md ([#9](https://github.com/test-kitchen/kitchen-opennebula/pull/9)) ([0324cc4](https://github.com/test-kitchen/kitchen-opennebula/commit/0324cc4))
 * Adding a server length check to the connection to help debug possible… ([#6](https://github.com/test-kitchen/kitchen-opennebula/pull/6)) ([583e747](https://github.com/test-kitchen/kitchen-opennebula/commit/583e747))
+
+## 0.1.1 (2015-01-16)
+
+* Initial commit ([c71113e](https://github.com/test-kitchen/kitchen-opennebula/commit/c71113e))
+* Initial release of kitchen-opennebula ([#1](https://github.com/test-kitchen/kitchen-opennebula/pull/1)) ([a45e4b0](https://github.com/test-kitchen/kitchen-opennebula/commit/a45e4b0))
+* Adding fog runtime dependency ([#2](https://github.com/test-kitchen/kitchen-opennebula/pull/2)) ([9dc57a7](https://github.com/test-kitchen/kitchen-opennebula/commit/9dc57a7))
+* kitchen-opennebula: 0.1.1 release ([#5](https://github.com/test-kitchen/kitchen-opennebula/pull/5)) ([5b165c7](https://github.com/test-kitchen/kitchen-opennebula/commit/5b165c7))
+
+* Initial release
