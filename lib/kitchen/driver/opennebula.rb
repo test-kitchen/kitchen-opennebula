@@ -16,7 +16,12 @@
 require "fog/opennebula"
 require "kitchen"
 require "kitchen/transport/ssh"
-require "time"
+# :nocov:
+# Chef/Ruby/UnlessDefinedRequire wants the guard; the guard can never take its
+# other branch here, because kitchen has already required "time" by this point.
+# Excluded from coverage so the two rules stop contradicting each other.
+require "time" unless defined?(Time.now.iso8601)
+# :nocov:
 require_relative "opennebula_version"
 
 module Kitchen
