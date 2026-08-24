@@ -20,6 +20,6 @@ module Kitchen
   module Driver
 
     # Version string for Opennebula Kitchen driver
-    OPENNEBULA_VERSION = "0.3.0".freeze
+    OPENNEBULA_VERSION = "0.4.0".freeze
   end
 end
