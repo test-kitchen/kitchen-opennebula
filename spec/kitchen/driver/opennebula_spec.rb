@@ -21,6 +21,85 @@ RSpec.describe Kitchen::Driver::Opennebula do
     allow(driver).to receive(:sleep)
   end
 
+  describe "#status" do
+    it "reports an unknown status with no vm in state" do
+      expect(driver.status({})).to include(live: nil, state: "unknown")
+    end
+
+    it "reports an unknown status when OpenNebula does not know the vm" do
+      allow(driver).to receive(:lookup_vm).with(42).and_return(nil)
+
+      expect(driver.status(vm_id: 42)).to include(state: "unknown")
+    end
+
+    it "reports a running vm as live" do
+      allow(driver).to receive(:lookup_vm)
+        .with(42).and_return("state" => "RUNNING")
+
+      expect(driver.status(vm_id: 42)).to include(
+        live: true, state: "RUNNING", source: "driver", resource_id: "42"
+      )
+    end
+
+    it "reports a booting vm as not live" do
+      allow(driver).to receive(:lookup_vm).and_return("state" => "BOOT")
+
+      expect(driver.status(vm_id: 42)).to include(live: false, state: "BOOT")
+    end
+
+    it "stamps when the check happened" do
+      allow(driver).to receive(:lookup_vm).and_return("state" => "RUNNING")
+
+      expect(driver.status(vm_id: 42)[:checked_at])
+        .to match(/\A\d{4}-\d{2}-\d{2}T/)
+    end
+
+    it "reports an unknown status when OpenNebula cannot be reached" do
+      allow(driver).to receive(:opennebula_connect)
+        .and_raise(StandardError.new("boom"))
+
+      expect(driver.status(vm_id: 42)).to include(state: "unknown")
+    end
+  end
+
+  describe "#doctor" do
+    before do
+      allow(driver).to receive(:opennebula_credentials).and_return(%w{user pass})
+    end
+
+    it "reports no problem when template and credentials are usable" do
+      expect(driver.doctor({})).to be(false)
+    end
+
+    context "with neither template_id nor template_name" do
+      let(:config) { {} }
+
+      it "reports a problem" do
+        expect(driver.doctor({})).to be(true)
+        expect(log_output.string).to match(/template_name or template_id not specified/)
+      end
+    end
+
+    context "with both template_id and template_name" do
+      let(:config) { { template_id: 7, template_name: "ubuntu" } }
+
+      it "reports a problem" do
+        expect(driver.doctor({})).to be(true)
+        expect(log_output.string).to match(/Only one of template_name or template_id/)
+      end
+    end
+
+    context "with unusable credentials" do
+      it "reports a problem" do
+        allow(driver).to receive(:opennebula_credentials)
+          .and_raise(Kitchen::ActionFailed.new("Could not find one_auth file /nope"))
+
+        expect(driver.doctor({})).to be(true)
+        expect(log_output.string).to match(/Could not find one_auth file/)
+      end
+    end
+  end
+
   describe "plugin metadata" do
     it "is a Test Kitchen driver" do
       expect(driver).to be_a(Kitchen::Driver::Base)
@@ -28,6 +107,11 @@ RSpec.describe Kitchen::Driver::Opennebula do
 
     it "declares driver API version 2" do
       expect(described_class.diagnose[:api_version]).to eq(2)
+    end
+
+    it "reports its own gem version to kitchen diagnose" do
+      expect(driver.diagnose_plugin[:version])
+        .to eq(Kitchen::Driver::OPENNEBULA_VERSION)
     end
 
     it "reports a name Test Kitchen can resolve from .kitchen.yml" do

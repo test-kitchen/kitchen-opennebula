@@ -16,6 +16,13 @@
 require "fog/opennebula"
 require "kitchen"
 require "kitchen/transport/ssh"
+# :nocov:
+# Chef/Ruby/UnlessDefinedRequire wants the guard; the guard can never take its
+# other branch here, because kitchen has already required "time" by this point.
+# Excluded from coverage so the two rules stop contradicting each other.
+require "time" unless defined?(Time.now.iso8601)
+# :nocov:
+require_relative "opennebula_version"
 
 module Kitchen
 
@@ -38,6 +45,11 @@ module Kitchen
     # @see https://kitchen.ci/docs/drivers/ Test Kitchen driver documentation
     class Opennebula < Kitchen::Driver::Base
       kitchen_driver_api_version 2
+
+      plugin_version Kitchen::Driver::OPENNEBULA_VERSION
+
+      # LCM states OpenNebula reports for a VM that is up and reachable.
+      LIVE_STATES = %w{RUNNING}.freeze
 
       # Characters used to build the random suffix of a generated VM hostname.
       HOSTNAME_CHARS = [*"a".."z", *"0".."9"].freeze
@@ -328,7 +340,71 @@ module Kitchen
         @default_vm_hostname ||= "#{instance.name}-#{self.class.random_hostname_suffix}"
       end
 
+      # Reports what OpenNebula currently thinks of the VM.
+      #
+      # @param state [Hash] instance state naming the VM
+      # @return [Hash] a Test Kitchen status hash, or the base implementation's
+      #   answer when there is no VM or OpenNebula does not know it
+      def status(state)
+        return super unless state[:vm_id]
+
+        vm = lookup_vm(state[:vm_id])
+        return super unless vm
+
+        lcm_state = vm["state"].to_s
+        {
+          live: LIVE_STATES.include?(lcm_state),
+          state: lcm_state,
+          source: "driver",
+          resource_id: state[:vm_id].to_s,
+          message: "OpenNebula reports the VM as #{lcm_state}",
+          checked_at: Time.now.utc.iso8601,
+        }
+      end
+
+      # Checks the configuration for the mistakes that otherwise surface only
+      # once +create+ is already part way through building a VM.
+      #
+      # @param state [Hash] mutable instance and driver state
+      # @return [Boolean] true when a problem was reported
+      def doctor(state) # rubocop:disable Lint/UnusedMethodArgument
+        problems = template_problems + credential_problems
+
+        problems.each { |problem| warn(problem) }
+        !problems.empty?
+      end
+
       private
+
+      # @return [Array<String>] a template configuration problem, or empty
+      def template_problems
+        validate_template_config!
+        []
+      rescue UserError => e
+        [e.message]
+      end
+
+      # Confirms credentials exist and are the shape OpenNebula wants, which is
+      # cheaper to learn here than midway through +create+.
+      #
+      # @return [Array<String>] a credentials problem, or empty
+      def credential_problems
+        opennebula_credentials
+        []
+      rescue ActionFailed => e
+        [e.message]
+      end
+
+      # Looks a VM up without turning an unreachable API into a failure.
+      #
+      # @param vm_id [Integer, String] the recorded VM id
+      # @return [Hash, nil] the VM payload, or nil when OpenNebula does not
+      #   know it or cannot be reached
+      def lookup_vm(vm_id)
+        opennebula_connect.list_vms({ id: vm_id }).first
+      rescue ::StandardError
+        nil
+      end
 
       # Builds an authenticated connection to the OpenNebula XML-RPC API and
       # applies the configured `wait_for` timeout to Fog's global blocking
