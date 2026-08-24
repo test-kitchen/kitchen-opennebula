@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
     "source_code_uri" => "https://github.com/test-kitchen/kitchen-opennebula",
   }
 
-  spec.add_dependency "test-kitchen", ">= 1.2", "< 5.0"
+  spec.add_dependency "test-kitchen", ">= 3.0", "< 5.0"
   spec.add_dependency "fog-opennebula", ">= 0.0.5"
   spec.add_dependency "opennebula", ">= 4.10"
 
