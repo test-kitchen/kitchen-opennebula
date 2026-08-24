@@ -2,6 +2,18 @@
 
 * Docs: lead with Cinc and split contributor docs ([#41](https://github.com/test-kitchen/kitchen-opennebula/pull/41)) ([eb0a0ba](https://github.com/test-kitchen/kitchen-opennebula/commit/eb0a0ba))
 
+## [0.4.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula/v0.3.0...kitchen-opennebula/v0.4.0) (2026-08-24)
+
+
+### Features
+
+* report the plugin version and implement the status and doctor hooks ([#51](https://github.com/test-kitchen/kitchen-opennebula/issues/51)) ([57e1acf](https://github.com/test-kitchen/kitchen-opennebula/commit/57e1acf49dc6c307a314d1e6a6cf50473d8db438))
+
+
+### Bug Fixes
+
+* require test-kitchen 3.0 or newer ([#49](https://github.com/test-kitchen/kitchen-opennebula/issues/49)) ([0efb435](https://github.com/test-kitchen/kitchen-opennebula/commit/0efb4358530bf947a28bb0ec1b208075b3e9789e))
+
 ## [0.3.0](https://github.com/test-kitchen/kitchen-opennebula/compare/kitchen-opennebula-v0.2.3...kitchen-opennebula/v0.3.0) (2026-08-23)
 
 ### Fixed
