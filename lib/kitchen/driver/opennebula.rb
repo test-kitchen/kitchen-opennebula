@@ -16,7 +16,7 @@
 require "fog/opennebula"
 require "kitchen"
 require "kitchen/transport/ssh"
-require "time" unless defined?(Time.now.iso8601)
+require "time"
 require_relative "opennebula_version"
 
 module Kitchen
