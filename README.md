@@ -248,6 +248,37 @@ Almost always a key mismatch — see [Making sure the SSH keys match](#making-su
 driver pushed the key you expected by checking the VM's context in OpenNebula, then confirm `transport.ssh_key` is its
 private half.
 
+### Checking a configuration before building anything
+
+```shell
+cinc kitchen doctor default-ubuntu-2404
+```
+
+`doctor` looks for the mistakes that otherwise surface only once `create` is
+already part way through building a VM: a `template_name`/`template_id` pair
+that is missing or ambiguous, and credentials that cannot be found or are not
+in `username:password` form. It prints one line per problem, and nothing at all
+when it is happy:
+
+```text
+-----> The doctor is in
+$$$$$$ Could not find one_auth file /home/you/.one/one_auth
+```
+
+### Asking OpenNebula what it makes of the VM
+
+```shell
+cinc kitchen list --live
+```
+
+The `Live Status` column is the VM's LCM state read from OpenNebula itself,
+rather than the last action recorded in the local state file — `RUNNING` for a
+VM that is up, `PENDING` or `BOOT` while it is coming up, and `unknown` when
+there is no VM, OpenNebula has forgotten it, or the endpoint cannot be reached.
+It is the quickest way to tell a VM that is genuinely gone from one Test
+Kitchen has merely lost track of. Add `--probe` to have Test Kitchen also try
+the transport.
+
 ### Seeing what the driver decided
 
 ```shell

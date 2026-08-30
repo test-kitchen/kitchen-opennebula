@@ -68,6 +68,28 @@ guest image meets the requirements in the README's "Preparing a guest image"
 section. Confirm with `onevm list` that no VMs were left behind after
 `kitchen destroy` — a run that fails partway through can leave one running.
 
+## Commit messages
+
+This project releases with
+[release-please](https://github.com/googleapis/release-please), which builds
+the changelog and picks the next version from commit messages. They must follow
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+```text
+feat: wait for cloud-init before converging
+fix: quote the template uid so OpenNebula filters on it
+docs: document the doctor hook
+chore: bump cookstyle
+```
+
+- `feat:` — a new feature; bumps the minor version.
+- `fix:` — a bug fix; bumps the patch version.
+- `docs:`, `chore:`, `test:`, `ci:`, `refactor:` — no release on their own.
+- `feat!:`, or a `BREAKING CHANGE:` footer — bumps the major version.
+
+Pull request titles matter too: squash-merged commits take the pull request
+title, so it needs the same prefix.
+
 ## Submitting changes
 
 1. Fork the repository.
@@ -83,9 +105,15 @@ configuration option.
 
 ## Release process
 
-Releases are handled by the maintainers.
+Releases are automated; maintainers do not bump versions or edit the changelog
+by hand.
 
-1. Update `lib/kitchen/driver/opennebula_version.rb` with the new version.
-2. Update `CHANGELOG.md`.
-3. Merge to `main`; the publish workflow builds the gem and pushes it to
-   RubyGems.
+1. release-please opens and maintains a release pull request against `main`,
+   carrying the next version and the generated changelog entries.
+2. Merging that pull request tags the release and updates
+   `lib/kitchen/driver/opennebula_version.rb` and `CHANGELOG.md`.
+3. [`.github/workflows/publish.yml`](.github/workflows/publish.yml) then builds
+   the gem and pushes it to RubyGems.
+
+Configuration lives in `release-please-config.json` and
+`.release-please-manifest.json`.
