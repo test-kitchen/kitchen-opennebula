@@ -10,6 +10,11 @@ group :test do
   gem "rake"
   gem "rspec", "~> 3.13"
   gem "simplecov", require: false
+  # Used by the fake OpenNebula daemon the integration suites run against.
+  # Both arrive transitively through the opennebula gem; naming them here keeps
+  # test/support/fake_opennebula.rb honest about what it requires.
+  gem "webrick"
+  gem "xmlrpc"
 end
 
 # Documentation tooling. Kept out of the :test group so CI, which installs

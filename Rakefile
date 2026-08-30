@@ -6,6 +6,11 @@ RSpec::Core::RakeTask.new(:test) do |t|
   t.pattern = "spec/**/*_spec.rb"
 end
 
+desc "Run the Test Kitchen integration suites against the fake OpenNebula daemon"
+task :integration do
+  ruby "test/integration/run.rb"
+end
+
 desc "Run Cookstyle/Chefstyle over the project, exactly as CI does"
 task :rubocop do
   # don't abort rake on failure

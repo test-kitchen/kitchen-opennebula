@@ -7,3 +7,24 @@ name: "Test"
 jobs:
   lint-unit:
     uses: test-kitchen/.github/.github/workflows/lint-unit.yml@main
+
+  integration:
+    name: Integration Ruby ${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+    needs: lint-unit
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby:
+          - "3.1"
+          - "3.4"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      # Drives the driver through a full create/converge/verify/destroy cycle
+      # for every suite in kitchen.yml, against the fake OpenNebula daemon in
+      # test/support/fake_opennebula.rb.
+      - run: bundle exec rake integration
