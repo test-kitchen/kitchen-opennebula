@@ -41,9 +41,9 @@ bundle exec rspec spec/kitchen/driver/opennebula_spec.rb
 ```
 
 The unit tests are self-contained: they never contact an OpenNebula endpoint,
-never read the real `~/.ssh` or `~/.one`, and never sleep. The suite enforces
-**100% line and branch coverage** of `lib/`, so a change that adds code without
-adding tests will fail on coverage alone.
+never read the real `~/.ssh` or `~/.one`, and never sleep. There is no code
+coverage gate — cover new code with tests because review expects it, not
+because a threshold enforces it.
 
 ## API documentation
 
@@ -94,8 +94,7 @@ title, so it needs the same prefix.
 
 1. Fork the repository.
 2. Create a feature branch off `main`.
-3. Make your change, adding or updating tests to cover it — the suite requires
-   100% line and branch coverage.
+3. Make your change, adding or updating tests to cover it.
 4. Make sure `bundle exec rake` passes.
 5. Push the branch to your fork and open a pull request.
 

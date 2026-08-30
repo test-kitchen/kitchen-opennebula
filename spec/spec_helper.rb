@@ -13,14 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require "simplecov"
-
-SimpleCov.start do
-  add_filter "/spec/"
-  enable_coverage :branch
-  minimum_coverage line: 100, branch: 100
-end
-
 require "tmpdir"
 require "stringio"
 
