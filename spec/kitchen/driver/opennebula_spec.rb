@@ -249,7 +249,7 @@ RSpec.describe Kitchen::Driver::Opennebula do
     let(:vm) { fog_vm(id: 42, ip: "192.0.2.10") }
     let(:new_server) { fog_new_server(vm) }
     let(:flavors) { double("Fog::Compute::OpenNebula::Flavors", get: flavor) }
-    let(:servers) { double("Fog::Compute::OpenNebula::Servers", new: new_server) }
+    let(:servers) { double("Fog::Compute::OpenNebula::Servers", new: new_server, get: nil) }
     let(:connection) { fog_connection(servers: servers, flavors: flavors) }
     let(:state) { {} }
 
@@ -261,6 +261,57 @@ RSpec.describe Kitchen::Driver::Opennebula do
     it "records the VM id, address and login user in the state" do
       driver.create(state)
       expect(state).to eq(vm_id: 42, hostname: "192.0.2.10", username: "local")
+    end
+
+    it "records the VM id before waiting on the VM, so a failed create can be destroyed" do
+      allow(vm).to receive(:wait_for) { raise Fog::Errors::TimeoutError }
+
+      expect { driver.create(state) }.to raise_error(Kitchen::ActionFailed)
+      expect(state[:vm_id]).to eq(42)
+    end
+
+    context "when the VM never reaches a running state" do
+      before { allow(vm).to receive(:wait_for) { raise Fog::Errors::TimeoutError } }
+
+      it "names the VM and the setting that governs the wait" do
+        expect { driver.create(state) }.to raise_error(
+          Kitchen::ActionFailed, /VM 42 .* still not running after 600 seconds.*raise wait_for/m
+        )
+      end
+
+      it "does not go on to probe the transport" do
+        expect(transport_connection).not_to receive(:wait_until_ready)
+        expect { driver.create(state) }.to raise_error(Kitchen::ActionFailed)
+      end
+    end
+
+    it "reports a VM that vanishes while it is being polled" do
+      allow(vm).to receive(:wait_for) { raise Fog::Errors::Error, "Reload failed" }
+
+      expect { driver.create(state) }.to raise_error(
+        Kitchen::ActionFailed, /Could not tell whether OpenNebula VM 42 .* Reload failed/
+      )
+    end
+
+    context "when OpenNebula reports no address for the VM" do
+      let(:vm) { fog_vm(id: 42, ip: nil) }
+
+      it "says the template is probably missing a network" do
+        expect { driver.create(state) }.to raise_error(
+          Kitchen::ActionFailed, /reported no address for VM 42 .*no NIC attached to a network/m
+        )
+      end
+
+      it "still leaves the VM id in the state so it can be destroyed" do
+        expect { driver.create(state) }.to raise_error(Kitchen::ActionFailed)
+        expect(state[:vm_id]).to eq(42)
+      end
+    end
+
+    it "rejects an empty address as firmly as a missing one" do
+      allow(vm).to receive(:ip).and_return("")
+
+      expect { driver.create(state) }.to raise_error(Kitchen::ActionFailed, /reported no address/)
     end
 
     it "names the VM after the configured vm_hostname" do
@@ -331,9 +382,9 @@ RSpec.describe Kitchen::Driver::Opennebula do
     end
 
     context "when the state already points at a live VM" do
-      let(:state) { { vm_id: 42 } }
-      let(:connection) do
-        fog_connection(servers: servers, flavors: flavors, list_vms: [{ "id" => 42 }])
+      let(:state) { { vm_id: 42, hostname: "192.0.2.10" } }
+      let(:servers) do
+        double("Fog::Compute::OpenNebula::Servers", new: new_server, get: vm)
       end
 
       it "does not create a second VM" do
@@ -347,14 +398,41 @@ RSpec.describe Kitchen::Driver::Opennebula do
       end
 
       it "looks the VM up by the recorded id" do
-        expect(connection).to receive(:list_vms).with({ id: 42 }).and_return([{ "id" => 42 }])
+        expect(servers).to receive(:get).with(42).and_return(vm)
+        driver.create(state)
+      end
+
+      it "does not probe the transport again" do
+        expect(transport_connection).not_to receive(:wait_until_ready)
+        driver.create(state)
+      end
+    end
+
+    context "when an earlier create left a VM behind without recording its address" do
+      let(:state) { { vm_id: 42 } }
+      let(:servers) do
+        double("Fog::Compute::OpenNebula::Servers", new: new_server, get: vm)
+      end
+
+      it "picks that VM up rather than building a second one" do
+        expect(servers).not_to receive(:new)
+        driver.create(state)
+        expect(state).to eq(vm_id: 42, hostname: "192.0.2.10", username: "local")
+      end
+
+      it "says which VM it picked up" do
+        driver.create(state)
+        expect(logged).to include("Picking up the OpenNebula VM 42")
+      end
+
+      it "runs the readiness checks it never got to" do
+        expect(transport_connection).to receive(:wait_until_ready)
         driver.create(state)
       end
     end
 
     context "when the state points at a VM that no longer exists" do
       let(:state) { { vm_id: 42 } }
-      let(:connection) { fog_connection(servers: servers, flavors: flavors, list_vms: []) }
 
       it "creates a replacement VM" do
         expect(servers).to receive(:new).and_return(new_server)
@@ -926,15 +1004,19 @@ RSpec.describe Kitchen::Driver::Opennebula do
     end
 
     it "recognises an existing VM by id" do
-      expect(driver.send(:vm_exists?, service, 4)).to be(true)
+      expect(driver.send(:existing_vm, service, 4).id).to eq(4)
     end
 
     it "recognises an unknown VM id" do
-      expect(driver.send(:vm_exists?, service, 999)).to be(false)
+      expect(driver.send(:existing_vm, service, 999)).to be_nil
     end
 
     it "treats a missing VM id as 'not created'" do
-      expect(driver.send(:vm_exists?, service, nil)).to be(false)
+      expect(driver.send(:existing_vm, service, nil)).to be_nil
+    end
+
+    it "reads the address off a VM it picked back up" do
+      expect(driver.send(:vm_address, service.servers.get(4))).to eq("1.1.1.1")
     end
 
     it "resolves a template by id" do
