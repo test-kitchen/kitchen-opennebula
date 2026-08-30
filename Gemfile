@@ -9,7 +9,6 @@ end
 group :test do
   gem "rake"
   gem "rspec", "~> 3.13"
-  gem "simplecov", require: false
 end
 
 # Documentation tooling. Kept out of the :test group so CI, which installs
