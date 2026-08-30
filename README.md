@@ -209,6 +209,10 @@ or skipped.
 | `cloud_init_timeout` | `600` | Seconds to wait for cloud-init to finish. |
 | `cloud_init_retry_interval` | `10` | Seconds between cloud-init polls. |
 
+If any of this fails, the VM is left running so you can look at it, and its id
+is in the state file — `kitchen destroy` removes it, and a second
+`kitchen create` picks the same VM back up rather than building another one.
+
 The `no_*` settings trade a real readiness check for a fixed sleep. They are an escape hatch for images the checks
 cannot handle, not a speed-up — reach for them only after the real check has proven unworkable.
 
@@ -228,6 +232,8 @@ Test Kitchen quietly moves it there for you. Configure client installation on `p
 | `Could not find one_auth file ...` | `ONE_AUTH` and `oneauth_file` both point at nothing. Create the file or export the credentials. |
 | `OpenNebula credentials must be in 'username:password' form` | The credentials file or `ONE_AUTH` value is empty or missing the colon. |
 | `Could not find an SSH public key. Set public_key_path in .kitchen.yml.` | No key was found in `~/.ssh`. Generate one, or set `public_key_path` explicitly. |
+| `OpenNebula VM <id> for <instance> was still not running after 600 seconds` | OpenNebula never brought the VM up. `onevm show <id>` will say why — a VM stuck in `PENDING` means no host could satisfy the template. Raise `wait_for` if the cloud is simply slow. The VM is recorded in the state file either way, so `kitchen destroy` cleans it up. |
+| `OpenNebula reported no address for VM <id>` | The VM is running, but OpenNebula gave it no address. Its template almost certainly has no NIC attached to a network — the driver does not add one. |
 | `Passwordless sudo was not ready on <instance> after 300 seconds` | The login user cannot `sudo` without a password. Fix the image, or raise `passwordless_sudo_timeout` if it is simply slow to configure. |
 | `Cloud-init failed on <instance>` | Cloud-init ran and reported failure. `kitchen login` and check `cloud-init analyze dump` — this is a problem in the image, not the driver. |
 | `Cloud-init did not finish on <instance> after 600 seconds` | Cloud-init is still working. Raise `cloud_init_timeout`, or set `no_cloud_init_check: true` if you do not need to wait for it. |

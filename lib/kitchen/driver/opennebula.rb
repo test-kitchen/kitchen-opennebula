@@ -133,8 +133,10 @@ module Kitchen
       # Creates an OpenNebula VM for this instance and blocks until it is ready
       # to be converged.
       #
-      # The method is idempotent: if `state` already carries a `:vm_id` that
-      # still resolves to a VM in OpenNebula, no new VM is created.
+      # The method is idempotent. If `state` already carries a `:vm_id` that
+      # still resolves to a VM in OpenNebula, no new VM is created: a VM that
+      # is already reachable is left alone, and one an earlier run allocated
+      # but never saw become ready is picked back up where that run left off.
       #
       # @param state [Hash] mutable instance state; populated with `:vm_id`,
       #   `:hostname` and `:username` on success
@@ -152,25 +154,25 @@ module Kitchen
         rc = conn.client.get_version
         raise ActionFailed, rc.message if OpenNebula.is_error?(rc)
 
-        if vm_exists?(conn, state[:vm_id])
+        vm = existing_vm(conn, state[:vm_id])
+        if vm && state[:hostname]
           info("OpenNebula instance #{instance.to_str} already created.")
           return
         end
 
-        newvm = conn.servers.new
-        newvm.flavor = find_flavor(conn)
-        newvm.name = config[:vm_hostname]
+        if vm
+          info("Picking up the OpenNebula VM #{vm.id} an earlier create left behind.")
+        else
+          vm = allocate_vm(conn)
+          # Record the id before waiting on the VM. It exists in OpenNebula
+          # from this point on, so if anything below fails the id has to be in
+          # the state file for `kitchen destroy` to be able to clean it up.
+          state[:vm_id] = vm.id
+        end
 
-        apply_user_variables(newvm.flavor)
-        apply_context(newvm.flavor)
-        apply_sizing(newvm.flavor)
+        wait_until_running(vm)
 
-        # TODO: Set up NIC and disk if not specified in template
-        vm = newvm.save
-        vm.wait_for { ready? }
-
-        state[:vm_id] = vm.id
-        state[:hostname] = vm.ip
+        state[:hostname] = vm_address(vm)
         state[:username] = config[:username]
 
         tcp_check(state)
@@ -181,8 +183,8 @@ module Kitchen
 
       # Destroys the OpenNebula VM tracked in `state`, if there is one.
       #
-      # @param state [Hash] mutable instance state; `:vm_id` is cleared on
-      #   success
+      # @param state [Hash] mutable instance state; `:vm_id` and `:hostname`
+      #   are cleared on success
       # @return [void]
       # @raise [Kitchen::ActionFailed] if OpenNebula credentials are missing
       def destroy(state)
@@ -462,15 +464,69 @@ module Kitchen
         end
       end
 
-      # Checks whether a previously recorded VM still exists in OpenNebula.
+      # Looks up the VM a previous run recorded, if it is still there.
       #
       # @param conn [Fog::Compute::OpenNebula] an OpenNebula compute service
       # @param vm_id [Integer, String, nil] the recorded VM id
-      # @return [Boolean] true when `vm_id` is set and still resolves
-      def vm_exists?(conn, vm_id)
-        return false if vm_id.nil?
+      # @return [Fog::Compute::OpenNebula::Server, nil] the VM, or nil when
+      #   none was recorded or OpenNebula no longer knows it
+      def existing_vm(conn, vm_id)
+        return nil if vm_id.nil?
 
-        !conn.list_vms({ id: vm_id }).empty?
+        conn.servers.get(vm_id)
+      end
+
+      # Builds this instance's VM from the configured template.
+      #
+      # @param conn [Fog::Compute::OpenNebula] an OpenNebula compute service
+      # @return [Fog::Compute::OpenNebula::Server] the allocated VM
+      # @raise [Kitchen::UserError] if the template configuration is invalid or
+      #   the configured public key cannot be read
+      def allocate_vm(conn)
+        newvm = conn.servers.new
+        newvm.flavor = find_flavor(conn)
+        newvm.name = config[:vm_hostname]
+
+        apply_user_variables(newvm.flavor)
+        apply_context(newvm.flavor)
+        apply_sizing(newvm.flavor)
+
+        # TODO: Set up NIC and disk if not specified in template
+        newvm.save
+      end
+
+      # Blocks until OpenNebula reports the VM as running.
+      #
+      # @param vm [Fog::Compute::OpenNebula::Server] the VM to poll
+      # @return [void]
+      # @raise [Kitchen::ActionFailed] if the VM is not running within
+      #   `wait_for` seconds, or cannot be polled
+      def wait_until_running(vm)
+        vm.wait_for { ready? }
+      rescue Fog::Errors::TimeoutError
+        raise ActionFailed,
+          "OpenNebula VM #{vm.id} for #{instance.to_str} was still not running after " \
+          "#{config[:wait_for]} seconds. Check the VM in OpenNebula -- a VM that stays " \
+          "PENDING usually means no host could satisfy the template -- and raise wait_for " \
+          "if it simply needs longer."
+      rescue Fog::Errors::Error => e
+        raise ActionFailed,
+          "Could not tell whether OpenNebula VM #{vm.id} for #{instance.to_str} " \
+          "is running: #{e.message}"
+      end
+
+      # The address Test Kitchen should connect to the VM on.
+      #
+      # @param vm [Fog::Compute::OpenNebula::Server] a running VM
+      # @return [String] the VM's address
+      # @raise [Kitchen::ActionFailed] if OpenNebula reported no address
+      def vm_address(vm)
+        address = vm.ip
+        return address unless address.nil? || address.to_s.empty?
+
+        raise ActionFailed,
+          "OpenNebula reported no address for VM #{vm.id} (#{instance.to_str}). " \
+          "The template it was built from probably has no NIC attached to a network."
       end
 
       # Resolves the OpenNebula template (Fog flavor) the VM is built from.
