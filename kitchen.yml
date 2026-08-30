@@ -1,0 +1,60 @@
+---
+# Integration suites for the driver itself.
+#
+# These run against `test/support/fake_opennebula.rb`, an in-memory stand-in
+# for an OpenNebula XML-RPC daemon, so the whole driver -- template lookup, VM
+# instantiation, the readiness checks and destroy -- is exercised through real
+# Test Kitchen, real fog-opennebula and the real opennebula client, with no
+# OpenNebula cloud needed.
+#
+# Start everything with `bundle exec rake integration`; see CONTRIBUTING.md.
+
+driver:
+  name: opennebula
+  # opennebula_endpoint and the credentials come from ONE_XMLRPC and ONE_AUTH,
+  # which the integration runner points at the fake daemon.
+  public_key_path: <%= ENV.fetch("KITCHEN_OPENNEBULA_PUBLIC_KEY", "~/.ssh/id_rsa.pub") %>
+
+transport:
+  name: dummy
+  sleep: 0
+
+provisioner:
+  name: dummy
+
+verifier:
+  name: dummy
+
+platforms:
+  - name: fake
+
+suites:
+  # The path a real user takes: pick a template by id, then let every readiness
+  # check run for real against the transport.
+  - name: template-by-id
+    driver:
+      template_id: 1
+
+  # Template lookup by name and owner, with every template section the driver
+  # can rewrite in play.
+  - name: template-by-name
+    driver:
+      template_name: kitchen
+      template_uname: oneadmin
+      memory: 1024
+      vcpu: 2
+      cpu: 2
+      context_variables:
+        SET_HOSTNAME: kitchen-integration
+      user_variables:
+        OWNER: kitchen-integration
+
+  # The escape hatches: every readiness check replaced by a sleep.
+  - name: readiness-checks-skipped
+    driver:
+      template_id: 1
+      no_ssh_tcp_check: true
+      no_ssh_tcp_check_sleep: 0
+      no_passwordless_sudo_check: true
+      no_passwordless_sudo_sleep: 0
+      no_cloud_init_check: true

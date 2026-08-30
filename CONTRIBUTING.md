@@ -26,7 +26,7 @@ cd kitchen-opennebula
 bundle install
 ```
 
-## Running the tests
+## Running the unit tests
 
 ```shell
 bundle exec rake test      # RSpec unit tests
@@ -45,6 +45,37 @@ never read the real `~/.ssh` or `~/.one`, and never sleep. The suite enforces
 **100% line and branch coverage** of `lib/`, so a change that adds code without
 adding tests will fail on coverage alone.
 
+## Running the integration tests
+
+```shell
+bundle exec rake integration
+```
+
+The integration suites drive the real driver through real Test Kitchen -- the
+whole `kitchen test` cycle, plus the doctor hook and the failure paths -- using
+the suites in `kitchen.yml`. They need no OpenNebula cloud: `rake integration`
+starts `test/support/fake_opennebula.rb`, an in-memory XML-RPC daemon that
+implements the handful of `one.*` methods this driver reaches for, and points
+`ONE_XMLRPC` and `ONE_AUTH` at it exactly as a user would point them at a real
+cloud. Everything between the driver and that daemon -- fog-opennebula, the
+`opennebula` client, XML-RPC, Test Kitchen's action lifecycle -- is the real
+thing, so a change that breaks against a newer fog or client gem fails here.
+
+The fake daemon is deliberately strict: it rejects a VM whose `CONTEXT` is
+missing the SSH public key or the `TEST_KITCHEN` marker, so a regression in
+contextualization fails the run rather than passing quietly.
+
+To watch a single suite, start the daemon yourself and drive Test Kitchen by
+hand:
+
+```shell
+ruby test/support/fake_opennebula.rb &
+export ONE_XMLRPC=http://127.0.0.1:12633/RPC2
+export ONE_AUTH=oneadmin:opennebula
+export KITCHEN_OPENNEBULA_PUBLIC_KEY=~/.ssh/id_rsa.pub
+bundle exec kitchen test template-by-id-fake
+```
+
 ## API documentation
 
 API documentation is written as [YARD](https://yardoc.org/) comments. YARD lives
@@ -60,8 +91,9 @@ bundle exec rake doc_coverage  # list anything still undocumented
 ## Manual testing
 
 Changes that touch VM instantiation or the readiness checks should also be
-exercised against a real OpenNebula cloud, since the unit tests deliberately
-never contact one.
+exercised against a real OpenNebula cloud. The integration suites prove the
+driver talks to the OpenNebula API correctly, but only a real cloud boots a
+real guest.
 
 You will need an XML-RPC endpoint, credentials, and a registered template whose
 guest image meets the requirements in the README's "Preparing a guest image"
@@ -74,7 +106,7 @@ section. Confirm with `onevm list` that no VMs were left behind after
 2. Create a feature branch off `main`.
 3. Make your change, adding or updating tests to cover it — the suite requires
    100% line and branch coverage.
-4. Make sure `bundle exec rake` passes.
+4. Make sure `bundle exec rake` and `bundle exec rake integration` pass.
 5. Push the branch to your fork and open a pull request.
 
 Please keep pull requests focused on a single change — it makes review much

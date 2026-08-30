@@ -1,3 +1,5 @@
+.kitchen
+.kitchen.local.yml
 .project
 .idea
 .rspec_status
